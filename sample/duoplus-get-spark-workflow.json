@@ -1,0 +1,29 @@
+{
+  "name": "Get Spark From TikTok URL",
+  "inputs": {
+    "post_url": {
+      "type": "string",
+      "required": true,
+      "example": "https://www.tiktok.com/@giby724/video/7678551339135143199"
+    },
+    "spark_output": {
+      "type": "string",
+      "required": true,
+      "default": "fail",
+      "note": "Sentinel until run completes; overwritten by RPA with the spark code"
+    }
+  },
+  "output": {
+    "variable": "spark_output",
+    "clipboardNode": "GET_CLIPBOARD save_result=$spark_output",
+    "logNode": "OUTPUT_LOG desc=FINALSPARK content=${spark_output}",
+    "example": "#V3nu0TXK6NKClF9Ko+3MZNSG0837LBmZ42maTIxIQWcSo17LJbDtcDPilr7XmWE="
+  },
+  "retrieval": {
+    "primary": "POST /api/v1/automation/taskLogList with task_id from taskList (Scheduled Task Report)",
+    "parse": "GET_CLIPBOARD $spark_output and OUTPUT_LOG desc=FINALSPARK in result_info.extra_data.data",
+    "fallback": "NET_REQUEST POST to app /api/spark/callback?task=${task_name} body {\"spark_code\":\"${spark_output}\",\"post_url\":\"${post_url}\"}",
+    "note": "taskList may lag; callback is most reliable if the phone can reach your server URL (not localhost unless tunneled)."
+  },
+  "fullExport": "duoplus-get-spark-workflow.full.json"
+}

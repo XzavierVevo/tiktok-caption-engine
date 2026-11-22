@@ -1,0 +1,14 @@
+data/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env
+.env.*
+node_modules/
+worker/
+.wrangler/
+.dev.vars
+README.md
+Dockerfile
+.dockerignore

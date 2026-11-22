@@ -1,0 +1,2080 @@
+[
+  {
+    "name": "create_thread",
+    "description": "Create a chat thread for MCP plans/uploads/sparks. Returns threadId.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_threads",
+    "description": "List recent chat threads for this user.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "set_active_thread",
+    "description": "Set the active threadId for subsequent tools in this MCP session.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "threadId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "threadId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "confirm_tool",
+    "description": "Execute a previously gated confirm tool by confirmId.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "confirmId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confirmId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_spark_job",
+    "description": "Poll a spark job by id (from fetch_spark).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_sources",
+    "description": "List video sources in the user's library (chat does not auto-add them to Create). Use these sourceIds in set_render_plan / preview_plan.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_images",
+    "description": "List still images in the library plus recent chat attachments. images[] is library insertion order. attachedInOrder is this turn's chat images. When the user said 'in order' / 'images added', chunk attachedInOrder (else images[]) sequentially into carousels.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "get_workspace",
+    "description": "Get captions, style, and batch options for the current plan. In chat this returns the thread plan (source=thread); outside chat it returns Create workspace.json (source=create). Does not return named Create plans from GET /api/plans \u2014 use list_plans for chat thread plans across chats.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_captions",
+    "description": "Replace this chat\u2019s caption list (one hook per line). Use ONLY for matrix mode where every caption applies to every video. For N captions per video (or uneven mixes), use set_render_plan instead. Does not change Create until the user presses Send to Create on Plan. Every line must be fully readable on a phone and clear of TikTok UI.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "captions": {
+          "type": "string",
+          "description": "Full captions text, one per line"
+        }
+      },
+      "required": [
+        "captions"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "add_captions",
+    "description": "Append hooks to the flat workspace caption list. Prefer set_render_plan when captions belong to specific videos.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "captions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Hooks to append, one string per caption"
+        }
+      },
+      "required": [
+        "captions"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_render_plan",
+    "description": "REQUIRED when writing captions for specific videos. Submit the full plan as structured JSON: each video\u2019s sourceId plus its caption list. Saves the active render plan (shared across chats; same data /preview shows). Set newPlan true to add another plan instead of replacing the current one (e.g. a second batch of captions on the same videos). Do NOT paste caption lists as markdown in chat \u2014 call this tool instead. Call list_sources first to get sourceIds. Call list_plans first when the user wants captions that are not the same as an existing plan. When captions come from ask_models or /multiple, pass captionDetails [{text, model, origin: '/multiple'}] (and origin '/multiple' on the plan) so the Plan spreadsheet shows which model wrote each row.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "videos": {
+          "type": "array",
+          "description": "One entry per source video with its captions",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "description": "Exact id from list_sources"
+              },
+              "captions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Hooks for this video only, in order. For mixed-model plans you may instead pass objects like {text, model, origin} in this array \u2014 the server accepts both shapes."
+              }
+            },
+            "required": [
+              "sourceId",
+              "captions"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "origin": {
+          "type": "string",
+          "description": "How captions were produced, e.g. chat, /all, /multiple, or pinterest"
+        },
+        "model": {
+          "type": "string",
+          "description": "Default model label when captions do not set their own model"
+        },
+        "captionDetails": {
+          "type": "array",
+          "description": "Optional per-caption tags matched by text. Use after ask_models / /multiple so Plan shows which model wrote each hook: [{text, model, origin}].",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "origin": {
+                "type": "string"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "newPlan": {
+          "type": "boolean",
+          "description": "If true, create a new plan and leave existing plans untouched. Use when the user asks for another plan, another 40 captions, a second batch, etc."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional label for this plan, e.g. 'Night-out hooks v2'"
+        },
+        "showUi": {
+          "type": "boolean",
+          "description": "If true, open the plan spreadsheet. Leave false when continuing to start_render / upload."
+        }
+      },
+      "required": [
+        "videos"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_carousel_plan",
+    "description": "REQUIRED for native TikTok photo carousels. Build N carousels of 1\u20135 stills each with one TikTok description caption per carousel. When the user says images 'in order', chunk ordered image ids sequentially (e.g. 20 images \u2192 10 two-slide carousels). Pass carousels[] with slides + caption, OR count + slideCount + imageIds + captions. Do not call start_render for carousels \u2014 use start_carousel_upload then fetch_spark.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "carousels": {
+          "type": "array",
+          "description": "Explicit carousel rows",
+          "items": {
+            "type": "object",
+            "properties": {
+              "slides": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "1\u20135 image library ids in slide order"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "carouselId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "slides",
+              "caption"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "imageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered image ids to chunk when using count/slideCount"
+        },
+        "count": {
+          "type": "integer",
+          "description": "How many carousels to build from imageIds in order"
+        },
+        "slideCount": {
+          "type": "integer",
+          "description": "Slides per carousel (1\u20135)"
+        },
+        "captions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "One caption per carousel, same order as groups"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "newPlan": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "showUi": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_plans",
+    "description": "List chat thread plans across all chats (title, counts, captions). Not the same as GET /api/plans (Create/workspace named plans). Call this before writing a new plan so captions are not duplicates.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "ask_models",
+    "description": "Run the same prompt on several chat models in parallel (text only, no tools). Use when the user wants multiple models to brainstorm captions, Pinterest search angles, or hooks. Then merge the best lines into set_render_plan with per-caption {text, model} and origin '/multiple'. For Pinterest discovery: ask_models for short search topics / angles, then YOU call search_pinterest + pinterest_set (do not run Pinterest tools from each model). Render and upload use start_render / start_tiktok_upload on the merged plan (jobs may queue if others are already running).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Model ids from the catalog, e.g. claude-sonnet-5, gpt-5.4, grok-4.6, gemini-3.6-flash. Same provider allowed."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Prompt each selected model should answer"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Optional hint: captions | pinterest | hooks | general"
+        }
+      },
+      "required": [
+        "models",
+        "prompt"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_offers",
+    "description": "List affiliate offers (hook generator).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "get_offer",
+    "description": "Get one offer including winners, likes, and pastCaptions (every hook already made for this offer). Pin it as the active offer so later plan captions go into that bank.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "offerId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_offer_captions",
+    "description": "List past on-screen captions for an offer (winners, likes, and generation/plan history). Pass this bank to Opus before writing new Reco / offer hooks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offerId": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "offerId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_active_offer",
+    "description": "Pin the offer new chat/plan captions belong to (Reco, Freecash, \u2026).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offerId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "offerId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "create_offer",
+    "description": "Create an affiliate offer.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "add_winner",
+    "description": "Save a winning hook on an offer.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offerId": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "offerId",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "add_like",
+    "description": "Like a generated hook for an offer.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offerId": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "offerId",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "generate_hooks",
+    "description": "Generate affiliate hooks with Claude Opus. Reads the offer's past caption bank first. Default mode new_angles. variations/mix also ok.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "offerId": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "enum": [
+            2,
+            5,
+            10,
+            20
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "variations",
+            "mix",
+            "new_angles"
+          ],
+          "description": "Default new_angles \u2014 fresh TikTok-ey lines."
+        },
+        "extraInstructions": {
+          "type": "string"
+        },
+        "randomWords": {
+          "type": "boolean",
+          "description": "Default false. Leave off unless asked. Reco lines say the money, tag income with [[uncompliant:income]], and match the clip."
+        }
+      },
+      "required": [
+        "offerId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_style",
+    "description": "Update caption look style settings in the workspace.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "style"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_end_caption",
+    "description": "Set end-of-video caption on a source (or apply template to all).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceId": {
+          "type": "string"
+        },
+        "applyToAll": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        },
+        "durationSeconds": {
+          "type": "number"
+        },
+        "xOffset": {
+          "type": "number"
+        },
+        "yOffset": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_batch_options",
+    "description": "Set matrix/pair/custom mode, name template, skip/dedupe.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "matrix",
+            "pair",
+            "custom"
+          ]
+        },
+        "nameTemplate": {
+          "type": "string"
+        },
+        "skipExisting": {
+          "type": "boolean"
+        },
+        "dedupe": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_outputs",
+    "description": "List rendered output videos in the library.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_tiktok_accounts",
+    "description": "List TikTok accounts (no cookie secrets).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "get_batch_status",
+    "description": "Poll a render batch by id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "batchId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "get_upload_status",
+    "description": "Poll a TikTok upload job by id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uploadId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uploadId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "preview_plan",
+    "description": "Build and save the active render plan (source\u00d7caption pairs; shared across chats). Pass pairs for a custom mix. Set newPlan true to add another plan instead of replacing the active one. Does not encode. By default does NOT open UI (use this when automating into start_render). Set showUi true only when the user asked to review the spreadsheet now.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "matrix",
+            "pair",
+            "custom"
+          ]
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "caption"
+            ]
+          }
+        },
+        "newPlan": {
+          "type": "boolean",
+          "description": "If true, save as a new plan instead of replacing the active plan."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional label for a new or updated plan"
+        },
+        "showUi": {
+          "type": "boolean",
+          "description": "If true, open the plan spreadsheet for the user to review. Leave false when continuing to start_render / upload."
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "search_pinterest",
+    "description": "Search Pinterest for pins matching a keyword. Use mediaType=image for stills (carousels) and mediaType=video for clips. Discovers pins for the model only \u2014 does NOT show the chat grid and does NOT download. After searching, you MUST call pinterest_set with action=show and the best pins (or all if few) so the user sees a selectable grid. Pass excludeUrls to skip denied or already-shown pins.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "cursor": {
+          "type": "string"
+        },
+        "excludeUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": [
+            "video",
+            "image",
+            "any"
+          ],
+          "description": "video (default), image for carousel stills, or any"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "pinterest_set",
+    "description": "Canonical Pinterest pin-set for chat. THIS is how pins appear in the grid or get downloaded \u2014 never invent pin lists in prose.\naction=show: put pins in the selectable chat grid (user can click to attach without downloading). mode=replace (default) replaces the shown set; mode=merge adds to it.\naction=download: download pins into the library. If pins is empty, uses attached pins, then the last shown set, then the thread bank.\nEach pin needs pinUrl; copy thumbnail/title/previewUrl from search_pinterest when available.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "show",
+            "download"
+          ]
+        },
+        "pins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pinUrl": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "thumbnail": {
+                "type": "string"
+              },
+              "previewUrl": {
+                "type": "string"
+              },
+              "previewKind": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "imageUrl": {
+                "type": "string"
+              },
+              "duration": {
+                "type": [
+                  "number",
+                  "integer",
+                  "string"
+                ]
+              },
+              "width": {
+                "type": [
+                  "number",
+                  "integer"
+                ]
+              },
+              "height": {
+                "type": [
+                  "number",
+                  "integer"
+                ]
+              }
+            },
+            "required": [
+              "pinUrl"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "query": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "replace",
+            "merge"
+          ]
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "inspect_sources",
+    "description": "Extract 1\u20132 still frames from downloaded source videos so you can see what is on screen. Use after videos are in the library.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "sourceIds"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "find_carousel_formats",
+    "description": "Find more photo-carousel formats like a reaction creator (screen-record of TikTok Photo posts, then talking head). Pass a public Instagram/TikTok profile URL, or specific post urls[]. Downloads each video, pulls early frames, and returns them so you can read the on-screen slide text. Then remake those formats with set_carousel_plan \u2014 do not clone the original photos. Limit 1\u201316 (default 8).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileUrl": {
+          "type": "string",
+          "description": "Creator profile, e.g. https://www.instagram.com/wrd2jon/"
+        },
+        "urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific reel/post URLs when the profile playlist is blocked"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Max posts to scan (default 8, max 16)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "analyze_example_ad",
+    "description": "Analyze a public TikTok post/ad URL as a creative example: description, hashtags, cover stills (vision), optional transcript, and suggested Pinterest search seeds. Use when the user pastes a TikTok link as a reference and wants similar Pinterest images + caption variations. Does not download the video into the library (use add_source_url for that).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Public TikTok video / ad share URL"
+        },
+        "getTranscript": {
+          "type": "boolean",
+          "description": "If true, also fetch spoken transcript (extra credits)"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "propose_ideas",
+    "description": "Show video\u00d7caption ideas in Chat for the user to watch, approve, or deny. Use ONLY when the user wants captioned approve/deny cards (e.g. make 10 captioned ideas). For picking/showing/downloading clips alone, use pinterest_set instead. Ideas start approved; the user only has to deny pins they do not want. Does not download or render. Call AFTER search_pinterest / pinterest_set, BEFORE add_source_urls / start_render. targetCount is how many ideas the user asked for. On refill, only send the remaining slots \u2014 already-approved ideas are kept by the UI. Never ask which pins in text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "targetCount": {
+          "type": "integer"
+        },
+        "ideas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pinUrl": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "thumbnail": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "previewUrl": {
+                "type": "string"
+              },
+              "previewKind": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pinUrl"
+            ]
+          }
+        }
+      },
+      "required": [
+        "targetCount",
+        "ideas"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "add_source_url",
+    "description": "Download a TikTok/YouTube/Pinterest URL into the video library and current job. Requires user confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "add_source_urls",
+    "description": "Download several TikTok/YouTube/Pinterest URLs into the library. Requires user confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "urls"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "start_render",
+    "description": "Start burning captions onto videos. Requires user confirm. Optionally pass pairs [{sourceId, caption}] for checked Preview tiles only. May return status queued if other renders are already running (up to 2 concurrent); keep using the returned batchId.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "caption"
+            ]
+          }
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "matrix",
+            "pair",
+            "custom"
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Retry-safe key; reuse on client retries"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "start_tiktok_upload",
+    "description": "Upload rendered videos from a finished batch to TikTok. Requires user confirm. Pass batchId from start_render. Optional accountId forces that TikTok account for every video (ignores Settings round-robin). May return status queued.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "batchId": {
+          "type": "string"
+        },
+        "captionTemplate": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string",
+          "description": "Force this TikTok account id for the whole upload (from the plan picker). Overrides Settings selection."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Retry-safe key; reuse on client retries"
+        }
+      },
+      "required": [
+        "batchId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "start_carousel_upload",
+    "description": "Publish native TikTok photo carousels from the active carousel plan (Studio, 1\u20135 images per post). Requires user confirm. Do not use start_render. Always returns a jobId immediately \u2014 poll upload status; `wait` is ignored. Pass soundQuery (TikTok sound search, e.g. 'if i can breathe i can think') and/or soundPath (local audio) so the carousel is not silent.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "captionTemplate": {
+          "type": "string"
+        },
+        "soundQuery": {
+          "type": "string",
+          "description": "Studio sound search, e.g. if i can breathe i can think"
+        },
+        "soundPath": {
+          "type": "string",
+          "description": "Local audio file to attach if search cannot pick the sound"
+        },
+        "useOriginalSound": {
+          "type": "boolean",
+          "description": "After get_custom_sound ready=true, attach this account's Recent original sound."
+        },
+        "wait": {
+          "type": "boolean",
+          "description": "Ignored \u2014 always returns jobId immediately; poll status tools instead."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Retry-safe key; reuse on client retries"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "create_custom_sound",
+    "description": "Seed a TikTok original sound by posting a Studio video whose audio is the custom track (audioPath, videoPath, or sourceId). Returns uploadId immediately. Poll get_custom_sound until review is approved before start_carousel_upload / start_tiktok_upload with useOriginalSound. Requires user confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountId": {
+          "type": "string"
+        },
+        "audioPath": {
+          "type": "string",
+          "description": "Local audio file (mp3/m4a). Muxed onto a still if no videoPath."
+        },
+        "videoPath": {
+          "type": "string",
+          "description": "Local video that already contains the custom audio."
+        },
+        "sourceId": {
+          "type": "string",
+          "description": "Library source whose file already has the custom audio."
+        },
+        "imagePath": {
+          "type": "string",
+          "description": "Optional still used when muxing audioPath into a seed video."
+        },
+        "caption": {
+          "type": "string",
+          "description": "Seed video description (used later to find the Studio row)."
+        }
+      },
+      "required": [
+        "accountId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "get_custom_sound",
+    "description": "Poll a custom original-sound seed. Pass jobId from create_custom_sound (or accountId + query). review is uploading|pending|approved|private|rejected. Approved (ready=true) means the Studio Content row is Everyone with no 'Content under review' badge \u2014 that is the green light to start_carousel_upload / start_tiktok_upload with useOriginalSound. Only me or a review badge is not approved.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string",
+          "description": "Seed caption to find in Studio Content if jobId is omitted."
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "fetch_spark",
+    "description": "Start a DuoPlus Spark (ad authorization) job for posted plan rows. Always returns a jobId immediately \u2014 `wait` is ignored. Poll get_spark_job until codes are ready. Rows without a post URL are skipped.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "wait": {
+          "type": "boolean",
+          "description": "Ignored \u2014 always returns jobId immediately; poll status tools instead."
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceId",
+              "caption"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Retry-safe key; reuse on client retries"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "list_facebook_accounts",
+    "description": "List connected Facebook ad accounts, Pages, and connection status.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_facebook_campaigns",
+    "description": "List Facebook ad campaigns on the selected ad account.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "adAccountId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_facebook_adsets",
+    "description": "List Facebook ad sets, optionally filtered by campaignId.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "campaignId": {
+          "type": "string"
+        },
+        "adAccountId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_facebook_pixels",
+    "description": "List Facebook pixels on the selected ad account.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "adAccountId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "start_facebook_ads",
+    "description": "Upload rendered videos to Facebook Ads as paused ads. Requires user confirm. mode: new_campaign, new_adset (needs campaignId), or existing_adset (needs adsetId). landingUrl is required. Uses Settings defaults for page, pixel, budget, and bid unless overridden.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "batchId": {
+          "type": "string"
+        },
+        "useLatestBatch": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "new_campaign",
+            "new_adset",
+            "existing_adset"
+          ]
+        },
+        "landingUrl": {
+          "type": "string"
+        },
+        "campaignId": {
+          "type": "string"
+        },
+        "adsetId": {
+          "type": "string"
+        },
+        "campaignName": {
+          "type": "string"
+        },
+        "adsetName": {
+          "type": "string"
+        },
+        "dailyBudget": {
+          "type": "number"
+        },
+        "bidStrategy": {
+          "type": "string",
+          "enum": [
+            "LOWEST_COST_WITHOUT_CAP",
+            "LOWEST_COST_WITH_BID_CAP",
+            "none",
+            "cap"
+          ]
+        },
+        "bidAmount": {
+          "type": "number"
+        },
+        "pixelId": {
+          "type": "string"
+        },
+        "customEventType": {
+          "type": "string"
+        },
+        "pageId": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Retry-safe key; reuse on client retries"
+        }
+      },
+      "required": [
+        "landingUrl"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "delete_sources",
+    "description": "Delete source videos by id. Requires user confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "sourceIds"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "delete_outputs",
+    "description": "Delete rendered output files. Requires user confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "paths"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "get_bc_settings",
+    "description": "Read Business Center options: day-one one-time ad-account budget (default $5), Sales Instant Page bid/budget/URL/CTAs, white-hat Spark code, extra ad accounts, add-balance amount, Mercury cap, VAT, and the last budget run (including errors).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_bc_settings",
+    "description": "Update Business Center options. Use adAccountBudgetUsd (or amountUsd) to change the default day-one one-time budget applied to every Ads Manager account right after adding balance. Pass sparkCode for the white-hat Reach campaign Spark paste. Pass salesConversionBidUsd, salesDailyBudgetUsd, salesLandingUrl, salesInstantPageCta, salesCreativeCta, salesDisplayCard, salesAdNameTemplate, or salesCreativeText for post-white-hat Sales Instant Page ads. salesDisplayCard attaches the TAP HERE Display Card when true. Pass accountName to override budget only for that ad account. Pass cardId / activeHostId to match Settings pickers (host change restarts the embedded worker). Does not apply budgets in TikTok immediately \u2014 it changes what the next budget-manager run will set.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "adAccountBudgetUsd": {
+          "type": "number",
+          "description": "Default one-time budget in USD for every Ads Manager account on day one (e.g. 5, 10, 25)."
+        },
+        "amountUsd": {
+          "type": "number",
+          "description": "Alias for adAccountBudgetUsd."
+        },
+        "accountName": {
+          "type": "string",
+          "description": "If set, store this amount only for that Ads Manager name (e.g. 'shop 2'). Omit to change the default."
+        },
+        "sparkCode": {
+          "type": "string",
+          "description": "White-hat Spark code pasted into Ads Manager (e.g. #0QeVFz\u2026). Alias: sparkCodeDefault."
+        },
+        "sparkCodeDefault": {
+          "type": "string",
+          "description": "Alias for sparkCode."
+        },
+        "extraAdAccounts": {
+          "type": "integer",
+          "description": "Settings default extras beyond the seed account (0\u201320). For a launch-specific override, pass accountsPerBc on start_spark_bc_launch or start_bc_warmup instead."
+        },
+        "addBalanceAmount": {
+          "type": "number",
+          "description": "Add-balance top-up in USD (minimum 10)."
+        },
+        "mercuryDailyLimit": {
+          "type": "number",
+          "description": "Mercury daily spend cap in USD."
+        },
+        "vatId": {
+          "type": "string",
+          "description": "VAT catalog id (e.g. se_556517)."
+        },
+        "cardId": {
+          "type": "string",
+          "description": "Saved billing card id from Settings \u2192 Business Center."
+        },
+        "activeHostId": {
+          "type": "string",
+          "description": "AdsPower host id to make active. Restarts the embedded provision worker so the new URL/key take effect."
+        },
+        "salesConversionBidUsd": {
+          "type": "number",
+          "description": "Sales Instant Page conversion (CPA) bid in USD."
+        },
+        "salesDailyBudgetUsd": {
+          "type": "number",
+          "description": "Sales ad-group daily budget in USD."
+        },
+        "salesLandingUrl": {
+          "type": "string",
+          "description": "Landing URL override (blank uses the offer URL)."
+        },
+        "salesInstantPageCta": {
+          "type": "string",
+          "description": "Instant Page button text (default Continue)."
+        },
+        "salesCreativeCta": {
+          "type": "string",
+          "description": "Creative CTA (default Learn more)."
+        },
+        "salesDisplayCard": {
+          "type": "boolean",
+          "description": "Attach the TAP HERE Display Card to Sales ads. True by default; false launches without a card."
+        },
+        "salesAdNameTemplate": {
+          "type": "string",
+          "description": "Ad name template, {offer} and {i} placeholders."
+        },
+        "salesCreativeText": {
+          "type": "string",
+          "description": "Optional ad text on each Sales creative."
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_bcs",
+    "description": "List Business Center inventory profiles with status, white-hat / ads-ready flags, payment-required, suspension, health, notes, and ad-account summaries. Optional view filter: warming_up, ads_ready, white_hat_pending, payment_required, disapproved, suspended, failed, needs_manual_login.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "view": {
+          "type": "string",
+          "description": "Saved-view filter (optional)."
+        },
+        "query": {
+          "type": "string",
+          "description": "Search email, BC name, notes, account id."
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "get_bc",
+    "description": "Get one BC profile with ad accounts, white-hat details, spark pack for intended offers, notes, health, and events.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "preview_spark_bc_launch",
+    "description": "Preview how many Business Centers / AdsPower profiles a Spark pack needs (10 sparks per ad account). Pass sparkCodes and/or intendedOfferIds plus optional accountsPerBc / bcCount. Returns capacity math, exclusive slices, and Mercury spend preview. Does not start a job.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "intendedOfferIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sparkCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pasted Spark codes (overrides offer catalog)."
+        },
+        "sparkText": {
+          "type": "string",
+          "description": "Paste blob of Spark codes (whitespace-separated)."
+        },
+        "accountsPerBc": {
+          "type": "integer",
+          "description": "Ad accounts per BC (default 1). 2 fits 20 sparks in one profile."
+        },
+        "extraAdAccounts": {
+          "type": "integer",
+          "description": "Alias for accountsPerBc-1 (extras beyond the seed)."
+        },
+        "bcCount": {
+          "type": "integer",
+          "description": "Override BC count (must be \u2265 ceil(sparks / capacity))."
+        },
+        "geo": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "start_bc_warmup",
+    "description": "Warm up exactly bcCount Business Centers (default 1). A retry while that warmup is still running returns the same job and does not create another BC. Each BC gets a profile, billing, and every ad account from Settings (seed plus extraAdAccounts), then white hat on each account. Does not auto-launch Sales. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bcCount": {
+          "type": "integer",
+          "description": "Number of Business Centers / AdsPower profiles (default 1)."
+        },
+        "count": {
+          "type": "integer",
+          "description": "Alias for bcCount."
+        },
+        "geo": {
+          "type": "string",
+          "description": "Geo code (default SE)."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "intendedOfferIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Offer ids to label these BCs (optional)."
+        },
+        "accountsPerBc": {
+          "type": "integer",
+          "description": "Ad accounts inside each BC. Omit this and extraAdAccounts to use Settings."
+        },
+        "extraAdAccounts": {
+          "type": "integer",
+          "description": "Extras beyond the seed for this job. Omit to use Settings."
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "start_spark_bc_launch",
+    "description": "Launch BCs sized from Spark count (10 per ad account) and assign exclusive Spark packs so Sales Instant Page ads run automatically after white-hat Scheduled. 20 sparks + 1 account \u2192 2 BCs / 2 profiles; 20 sparks + 2 accounts \u2192 1 BC. Requires confirm. Worker must be online.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "intendedOfferIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sparkCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sparkText": {
+          "type": "string"
+        },
+        "accountsPerBc": {
+          "type": "integer"
+        },
+        "extraAdAccounts": {
+          "type": "integer"
+        },
+        "bcCount": {
+          "type": "integer",
+          "description": "Override (must be \u2265 minimum from capacity math)."
+        },
+        "geo": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "get_bc_job",
+    "description": "Poll a provision / BC warm-up job by id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "cancel_bc_job",
+    "description": "Stop a running or queued BC warm-up job in place so it can be Continued from the BC table. Does not tear down the profile/proxy/Hoot. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "mark_bc_suspended",
+    "description": "Manually mark a BC profile or ad account as suspended. reasonCode: policy | payment | identity | unknown. Requires confirm. Do NOT use for Business Center disapproval / failed review \u2014 use mark_bc_disapproved instead.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "profile",
+            "account"
+          ]
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        },
+        "reasonCode": {
+          "type": "string",
+          "enum": [
+            "policy",
+            "payment",
+            "identity",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "mark_bc_disapproved",
+    "description": "Mark a BC profile as disapproved (failed review) \u2014 distinct from suspended. Burns the assigned proxy (unusable) and bans the Hoot account for the refund workflow. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "processRefund": {
+          "type": "boolean",
+          "description": "Default true: mark proxy unusable + Hoot banned."
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "mark_white_hat_approved",
+    "description": "Manually mark an ad account white-hat as Scheduled/approved (when verified in Ads Manager but watcher missed it). Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "accountId": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "continue_bc",
+    "description": "Resume an existing Business Center from its current incomplete step (same as the BCs Continue button). Does not create a new profile, proxy, or Hoot account. Requires confirm. Worker must be online.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "mark_bc_payment",
+    "description": "Mark payment as already added on a Business Center (same as BCs \u2192 Mark payment added). Skips the card charge. amountUsd defaults to 10. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "amountUsd": {
+          "type": "number",
+          "description": "Amount recorded. Default 10."
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "list_sparks",
+    "description": "List loaded TikTok posts and their spend across campaigns and ad accounts.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "get_tiktok_connection",
+    "description": "Marketing API connection status for a BC profile. Never returns the token.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "sync_tiktok_insights",
+    "description": "Sync TikTok spend, impressions, and cost per conversion for connected advertisers.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "list_topups",
+    "description": "List ad-account top-up tasks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "update_campaign_bid",
+    "description": "Change the bid on a campaign's ad group. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "advertiserId": {
+          "type": "string"
+        },
+        "adgroupId": {
+          "type": "string"
+        },
+        "bid": {
+          "type": "number"
+        },
+        "lead": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "profileId",
+        "advertiserId",
+        "adgroupId",
+        "bid"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "update_campaign_budget",
+    "description": "Change the daily budget on a campaign's ad group. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "advertiserId": {
+          "type": "string"
+        },
+        "adgroupId": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "profileId",
+        "advertiserId",
+        "adgroupId",
+        "budget"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "set_campaign_status",
+    "description": "Pause or enable a campaign. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "advertiserId": {
+          "type": "string"
+        },
+        "campaignId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId",
+        "advertiserId",
+        "campaignId",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "approve_topup",
+    "description": "Approve a manual top-up so the PC worker can charge the card. Requires confirm.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "topupId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "topupId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "start_sales_campaign",
+    "description": "Launch one Sales or Lead campaign on an ad account through the Marketing API. Same as BCs \u2192 Load sparks. White-hat posted is enough; do not wait for Scheduled and do not require Spark codes. Pass profileId, optional account (1-based slot, name, or advertiser id), conversionBidUsd, dailyBudgetUsd, objective (sales or lead), landingUrl, and offerIds. sparkCodes only when the user pasted them. Set autoPick=true to choose the first available account. Requires confirm. Worker must be online. Campaign and ads are published active.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "description": "BC profile id. Optional when autoPick is true."
+        },
+        "sparkCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional Spark codes; otherwise the assigned pack."
+        },
+        "landingUrl": {
+          "type": "string",
+          "description": "Instant Page website URL (else offer URL / Settings)."
+        },
+        "offerIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Offer ids to attach; updates profile intendedOfferIds."
+        },
+        "account": {
+          "type": "string",
+          "description": "Ad account: 1-based slot, account name, or TikTok advertiser id. Default 1 (seed)."
+        },
+        "force": {
+          "type": "boolean",
+          "description": "Re-enqueue even if Sales already draft/done."
+        },
+        "autoPick": {
+          "type": "boolean",
+          "description": "Pick the first available ads-ready ad account when profileId is omitted or empty."
+        },
+        "objective": {
+          "type": "string",
+          "description": "sales or lead. Default sales."
+        },
+        "conversionBidUsd": {
+          "type": "number"
+        },
+        "dailyBudgetUsd": {
+          "type": "number"
+        },
+        "bidScope": {
+          "type": "string",
+          "description": "website-ios = Website destination, conversion bid, dummy Pixel, iOS only. Instant Page is CONVERT BUTTON."
+        },
+        "creatorAccountId": {
+          "type": "string"
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "TikTok post item ids to load as ads."
+        },
+        "postUrl": {
+          "type": "string",
+          "description": "TikTok photo or video URL to load as the ad."
+        },
+        "topupAmountUsd": {
+          "type": "number"
+        },
+        "topupThresholdUsd": {
+          "type": "number"
+        },
+        "pageId": {
+          "type": "string"
+        },
+        "advertiserId": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "confirm": true
+  },
+  {
+    "name": "ensure_dummy_pixel",
+    "description": "Reuse a Pixel already on the Business Center, or create website-dummy, and link it to the ad account. This is only so a Sales ad can use a website link. It does not create an Instant Page.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "description": "BC profile id."
+        },
+        "account": {
+          "type": "string",
+          "description": "Ad account: 1-based slot, account name, or TikTok advertiser id. Default 1."
+        },
+        "advertiserId": {
+          "type": "string",
+          "description": "TikTok advertiser id. Overrides account when set."
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "set_bc_notes",
+    "description": "Set free-text notes on a BC profile (e.g. use for DE Freecash).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileId",
+        "notes"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": false
+  },
+  {
+    "name": "open_bc_ads_manager",
+    "description": "Enqueue opening Ads Manager for an ad account on the provision worker machine. Requires confirm. Worker must be online.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string"
+        },
+        "accountRef": {
+          "type": "string",
+          "description": "Account name, id, or 1-based index (default 1)."
+        }
+      },
+      "required": [
+        "profileId"
+      ],
+      "additionalProperties": false
+    },
+    "confirm": true
+  }
+]

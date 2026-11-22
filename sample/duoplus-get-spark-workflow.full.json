@@ -1,0 +1,515 @@
+{
+  "config": [
+    {
+      "key": "spark_output",
+      "value": "fail",
+      "type": "string",
+      "required": true,
+      "desc": ""
+    },
+    {
+      "key": "post_url",
+      "value": "https://www.tiktok.com/@giby724/video/7678230177108872479",
+      "type": "string",
+      "required": true,
+      "desc": ""
+    }
+  ],
+  "nodes": [
+    {
+      "id": "1",
+      "type": "START",
+      "position": {
+        "x": 300,
+        "y": 60
+      },
+      "data": {
+        "action": "START",
+        "exception_type": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 50
+      }
+    },
+    {
+      "id": "1788233524524",
+      "type": "OPEN_APP",
+      "position": {
+        "x": 423.2556493909946,
+        "y": 182.42876055648688
+      },
+      "data": {
+        "action": "OPEN_APP",
+        "package_name": "com.zhiliaoapp.musically",
+        "uri": "snssdk1233://aweme/detail/${post_url}",
+        "desc": "post_url must be numeric aweme id. Do not pass https:// into aweme/detail (opens For You, no Ad settings). For bare ${post_url} https OPEN_APP, set DUOPLUS_SPARK_POST_URL_MODE=full_url.",
+        "wait_before": "3000",
+        "wait_after": "5000",
+        "exception_type": "1",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788234907548",
+      "type": "CLICK_ELEMENT",
+      "position": {
+        "x": 332,
+        "y": 296
+      },
+      "data": {
+        "action": "CLICK_ELEMENT",
+        "save_result": "",
+        "desc": "",
+        "element_type": "element_selector",
+        "use_offset": false,
+        "exception_type": "1",
+        "exception_notify": "2",
+        "selector_bean_list": [
+          {
+            "fullId": "com.zhiliaoapp.musically:id/v6f"
+          }
+        ],
+        "selector_condition": "contain",
+        "type": "fixed_value",
+        "wait_before": "3000",
+        "wait_after": "0",
+        "fixed_value": "1",
+        "operator": "",
+        "number": ""
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788236045997",
+      "type": "SLIDE_PAGE",
+      "position": {
+        "x": 433,
+        "y": 483.5
+      },
+      "data": {
+        "action": "SLIDE_PAGE",
+        "element_type": "slide_page",
+        "direction": "left",
+        "end_distance": "1000",
+        "end_duration": "300",
+        "start_distance": "1000",
+        "start_duration": "200",
+        "random_start_range": "0",
+        "desc": "",
+        "exception_type": "1",
+        "exception_notify": "2",
+        "wait_before": "3000",
+        "wait_after": "0",
+        "position_x": "1011",
+        "position_y": "1722"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788236130801",
+      "type": "CLICK_ELEMENT",
+      "position": {
+        "x": 601,
+        "y": 662.5
+      },
+      "data": {
+        "action": "CLICK_ELEMENT",
+        "save_result": "",
+        "desc": "",
+        "element_type": "element_selector",
+        "use_offset": false,
+        "exception_type": "1",
+        "exception_notify": "2",
+        "selector_bean_list": [
+          {
+            "text": "Ad settings"
+          }
+        ],
+        "selector_condition": "contain",
+        "type": "fixed_value",
+        "wait_before": "3000",
+        "wait_after": "5000",
+        "fixed_value": "1",
+        "operator": "",
+        "number": ""
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788236655801",
+      "type": "CLICK_COORDINATE",
+      "position": {
+        "x": 704,
+        "y": 874.5
+      },
+      "data": {
+        "action": "CLICK_COORDINATE",
+        "x_coordinate": "936",
+        "y_coordinate": "868",
+        "random_distance": "0",
+        "random_distance_x": "0",
+        "random_distance_y": "0",
+        "desc": "",
+        "wait_before": "3000",
+        "wait_after": "0",
+        "exception_type": "1",
+        "exception_notify": "1"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788239807999",
+      "type": "GET_CLIPBOARD",
+      "position": {
+        "x": 1095.438053444452,
+        "y": 1946.5264846573698
+      },
+      "data": {
+        "action": "GET_CLIPBOARD",
+        "save_result": "$spark_output",
+        "desc": "",
+        "exception_type": "2",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788239810737",
+      "type": "EXECUTE_ADB",
+      "position": {
+        "x": 1563.2073413991645,
+        "y": 1695.615546996494
+      },
+      "data": {
+        "action": "EXECUTE_ADB",
+        "adb_command": "am force-stop com.zhiliaoapp.musically",
+        "desc": "",
+        "save_result": "",
+        "timeout": "30000",
+        "exception_type": "2",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 94
+      }
+    },
+    {
+      "id": "1788240536708",
+      "type": "CLICK_COORDINATE",
+      "position": {
+        "x": 809.2378695159014,
+        "y": 1535.8179052086418
+      },
+      "data": {
+        "action": "CLICK_COORDINATE",
+        "x_coordinate": "888",
+        "y_coordinate": "1435",
+        "random_distance": "0",
+        "random_distance_x": "0",
+        "random_distance_y": "0",
+        "desc": "",
+        "wait_before": "3000",
+        "wait_after": "2000",
+        "exception_type": "0",
+        "exception_notify": "1"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788240822386",
+      "type": "CLICK_COORDINATE",
+      "position": {
+        "x": 820.4602388376132,
+        "y": 1115.7806534531342
+      },
+      "data": {
+        "action": "CLICK_COORDINATE",
+        "x_coordinate": "540",
+        "y_coordinate": "1812",
+        "random_distance": "0",
+        "random_distance_x": "0",
+        "random_distance_y": "0",
+        "desc": "",
+        "wait_before": "3000",
+        "wait_after": "0",
+        "exception_type": "2",
+        "exception_notify": "1"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788240986255",
+      "type": "EXECUTE_ADB",
+      "position": {
+        "x": 652.4933861604125,
+        "y": 4.028002206893049
+      },
+      "data": {
+        "action": "EXECUTE_ADB",
+        "adb_command": "am force-stop com.zhiliaoapp.musically",
+        "desc": "",
+        "save_result": "",
+        "timeout": "30000",
+        "exception_type": "2",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 94
+      }
+    },
+    {
+      "id": "1788241219534",
+      "type": "CLICK_COORDINATE",
+      "position": {
+        "x": 862.1433248896861,
+        "y": 1357.7629919525498
+      },
+      "data": {
+        "action": "CLICK_COORDINATE",
+        "x_coordinate": "540",
+        "y_coordinate": "1812",
+        "random_distance": "0",
+        "random_distance_x": "0",
+        "random_distance_y": "0",
+        "desc": "",
+        "wait_before": "3000",
+        "wait_after": "5000",
+        "exception_type": "2",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788241431959",
+      "type": "CLICK_COORDINATE",
+      "position": {
+        "x": 991.2005720893744,
+        "y": 1766.577874386345
+      },
+      "data": {
+        "action": "CLICK_COORDINATE",
+        "x_coordinate": "540",
+        "y_coordinate": "1533",
+        "random_distance": "0",
+        "random_distance_x": "0",
+        "random_distance_y": "0",
+        "desc": "",
+        "wait_before": "3000",
+        "wait_after": "5000",
+        "exception_type": "2",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 74
+      }
+    },
+    {
+      "id": "1788241610192",
+      "type": "OUTPUT_LOG",
+      "position": {
+        "x": 1419.253801931819,
+        "y": 1941.3261966815753
+      },
+      "data": {
+        "action": "OUTPUT_LOG",
+        "desc": "FINALSPARK",
+        "output_log_content": "${spark_output}",
+        "exception_type": "2",
+        "exception_notify": "2"
+      },
+      "measured": {
+        "width": 196,
+        "height": 94
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1",
+      "sourceHandle": "1-output",
+      "target": "1788240986255",
+      "targetHandle": "1788240986255-input",
+      "id": "xy-edge__11-output-17882409862551788240986255-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788240986255",
+      "sourceHandle": "1788240986255-output",
+      "target": "1788233524524",
+      "targetHandle": "1788233524524-input",
+      "id": "xy-edge__17882409862551788240986255-output-17882335245241788233524524-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788233524524",
+      "target": "1788234907548",
+      "sourceHandle": "1788233524524-output",
+      "targetHandle": "1788234907548-input",
+      "id": "xy-edge__17882335245241788233524524-output-17882349075481788234907548-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788234907548",
+      "target": "1788236045997",
+      "sourceHandle": "1788234907548-output",
+      "targetHandle": "1788236045997-input",
+      "id": "xy-edge__17882349075481788234907548-output-17882360459971788236045997-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788236045997",
+      "target": "1788236130801",
+      "sourceHandle": "1788236045997-output",
+      "targetHandle": "1788236130801-input",
+      "id": "xy-edge__17882360459971788236045997-output-17882361308011788236130801-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788236130801",
+      "target": "1788236655801",
+      "sourceHandle": "1788236130801-output",
+      "targetHandle": "1788236655801-input",
+      "id": "xy-edge__17882361308011788236130801-output-17882366558011788236655801-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788236655801",
+      "sourceHandle": "1788236655801-output",
+      "target": "1788240822386",
+      "targetHandle": "1788240822386-input",
+      "id": "xy-edge__17882366558011788236655801-output-17882408223861788240822386-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788240822386",
+      "sourceHandle": "1788240822386-output",
+      "target": "1788241219534",
+      "targetHandle": "1788241219534-input",
+      "id": "xy-edge__17882408223861788240822386-output-17882412195341788241219534-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788241219534",
+      "sourceHandle": "1788241219534-output",
+      "target": "1788240536708",
+      "targetHandle": "1788240536708-input",
+      "id": "xy-edge__17882412195341788241219534-output-17882405367081788240536708-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788240536708",
+      "sourceHandle": "1788240536708-output",
+      "target": "1788241431959",
+      "targetHandle": "1788241431959-input",
+      "id": "xy-edge__17882405367081788240536708-output-17882414319591788241431959-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788241431959",
+      "sourceHandle": "1788241431959-output",
+      "target": "1788239807999",
+      "targetHandle": "1788239807999-input",
+      "id": "xy-edge__17882414319591788241431959-output-17882398079991788239807999-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788239807999",
+      "sourceHandle": "1788239807999-output",
+      "target": "1788241610192",
+      "targetHandle": "1788241610192-input",
+      "id": "xy-edge__17882398079991788239807999-output-17882416101921788241610192-input",
+      "selected": false
+    },
+    {
+      "type": "closableEdge",
+      "markerEnd": {
+        "type": "arrowclosed"
+      },
+      "source": "1788241610192",
+      "sourceHandle": "1788241610192-output",
+      "target": "1788239810737",
+      "targetHandle": "1788239810737-input",
+      "id": "xy-edge__17882416101921788241610192-output-17882398107371788239810737-input"
+    }
+  ]
+}

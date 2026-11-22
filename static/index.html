@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090b" />
+  <title>TikTok Caption Tool</title>
+  <link rel="stylesheet" href="/style.css?v=104" />
+  <script>
+    // Resolved by auth.js — app.js boots after AuthReady.
+    window.__auth = { token: null, user: null, mode: null };
+    window.AuthReady = new Promise((res) => { window.__resolveAuthReady = res; });
+    // Local API is HTTPS-only (start.bat). Plain http:// never completes TLS and
+    // looks like an infinite hang / ERR_TIMED_OUT in Chrome.
+    if (
+      location.protocol === "http:" &&
+      /^(localhost|127\.0\.0\.1)$/i.test(location.hostname)
+    ) {
+      location.replace(
+        "https://" + location.host + location.pathname + location.search + location.hash
+      );
+    }
+  </script>
+  <!-- Auth must run before the large classic bundles so returning users
+       leave the login screen without waiting on ~500KB of app/chat/bc parse. -->
+  <script type="module" src="/auth.js?v=4"></script>
+</head>
+<body>
+
+  <!-- ================= Login screen ================= -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-bay">
+      <div class="login-phone" aria-hidden="true">
+        <div class="login-phone-bezel">
+          <div class="login-phone-screen">
+            <p class="login-phone-cap">mood bc that wallet pass<br>be paying u $2k per week</p>
+          </div>
+        </div>
+      </div>
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="brand-mark">Tt</span>
+        <h1>TikTok Caption Tool</h1>
+      </div>
+      <p class="login-sub">Bulk-caption videos, render in the cloud, post to TikTok.</p>
+      <button id="loginBtn" class="btn primary login-google" type="button">
+        <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C36.9 40.1 44 35 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+        Continue with Google
+      </button>
+      <div id="loginStatus" class="login-status">Restoring session…</div>
+    </div>
+    </div>
+  </div>
+
+  <!-- ================= App shell ================= -->
+  <div id="appShell" class="app-shell hidden">
+    <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-brand">
+          <span class="brand-mark">Tt</span>
+          <span class="sidebar-brand-name">Caption Tool</span>
+          <button id="sidebarCollapse" class="sidebar-icon-btn" type="button" title="Close sidebar" aria-label="Close sidebar">
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor"/><path d="M6 2.5v11" fill="none" stroke="currentColor"/></svg>
+          </button>
+        </div>
+        <button id="chatNewBtn" class="sidebar-new-chat" type="button">
+          <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 3h7.5L13 5.5V13H3z" fill="none" stroke="currentColor"/><path d="M8 7v4M6 9h4" fill="none" stroke="currentColor" stroke-linecap="round"/></svg></span>
+          <span class="nav-label">New chat</span>
+        </button>
+        <nav class="sidebar-nav" aria-label="App">
+          <button type="button" class="nav-item" data-nav="chat" title="Chat" aria-label="Chat">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 3h10M3 8h10M3 13h6" fill="none" stroke="currentColor"/></svg></span>
+            <span class="nav-label">Chat</span>
+          </button>
+          <button type="button" class="nav-item active" data-nav="create" title="Create" aria-label="Create">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" fill="none" stroke="currentColor"/><path d="M8 5v6M5 8h6" fill="none" stroke="currentColor" stroke-linecap="round"/></svg></span>
+            <span class="nav-label">Create</span>
+          </button>
+          <button type="button" class="nav-item" data-nav="bcs" title="Business Centers" aria-label="Business Centers">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2.5 3.5h11v9h-11z" fill="none" stroke="currentColor"/><path d="M2.5 6.5h11M5.5 3.5v9M8.5 6.5v6" fill="none" stroke="currentColor"/></svg></span>
+            <span class="nav-label">BCs</span>
+          </button>
+          <button type="button" class="nav-item" data-nav="sparks" title="Sparks" aria-label="Sparks">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 1.5l1.6 4.2H14l-3.5 2.6 1.3 4.2L8 10.2 4.2 12.5l1.3-4.2L2 5.7h4.4z" fill="none" stroke="currentColor"/></svg></span>
+            <span class="nav-label">Sparks</span>
+          </button>
+          <button type="button" class="nav-item" data-nav="settings" title="Settings" aria-label="Settings">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h10" fill="none" stroke="currentColor"/><circle cx="6" cy="4" r="1.2" fill="currentColor"/><circle cx="11" cy="8" r="1.2" fill="currentColor"/><circle cx="7.5" cy="12" r="1.2" fill="currentColor"/></svg></span>
+            <span class="nav-label">Settings</span>
+          </button>
+        </nav>
+        <div class="chat-recents-label">Recents</div>
+        <ul id="chatThreadList" class="chat-thread-list"></ul>
+      </div>
+      <div class="sidebar-profile" id="userChip">
+        <button type="button" id="profileMenuBtn" class="sidebar-profile-btn" aria-haspopup="menu" aria-expanded="false">
+          <img id="userAvatar" class="user-avatar" alt="" referrerpolicy="no-referrer" />
+          <span class="sidebar-profile-text">
+            <span id="userName" class="user-name"></span>
+          </span>
+          <span class="sidebar-profile-more" aria-hidden="true">⋯</span>
+        </button>
+        <div id="profileMenu" class="sidebar-profile-menu hidden" role="menu">
+          <button type="button" class="chat-row-menu-item" role="menuitem" data-profile-action="settings">
+            <span class="chat-row-menu-icon" aria-hidden="true">⚙</span><span>Settings</span>
+          </button>
+          <button type="button" class="chat-row-menu-item" role="menuitem" data-profile-action="theme">
+            <span class="chat-row-menu-icon" aria-hidden="true">◐</span><span>Theme</span>
+          </button>
+          <div class="chat-row-menu-divider"></div>
+          <button type="button" id="signOutBtn" class="chat-row-menu-item is-danger" role="menuitem" data-profile-action="signout">
+            <span class="chat-row-menu-icon" aria-hidden="true">↪</span><span>Sign out</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button id="hamburger" class="hamburger" type="button" title="Menu" aria-label="Menu">☰</button>
+        <button id="sidebarOpenBtn" class="sidebar-icon-btn sidebar-open-btn hidden" type="button" title="Open sidebar" aria-label="Open sidebar">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor"/><path d="M6 2.5v11" fill="none" stroke="currentColor"/></svg>
+        </button>
+        <h1 id="pageTitle">Create</h1>
+        <div class="header-right">
+          <span id="encoderBadge" class="badge" title="Active video encoder"></span>
+        </div>
+      </header>
+
+      <div id="ffmpegWarning" class="warning hidden">
+        FFmpeg was not found on the server. Rendering is unavailable until it is fixed.
+      </div>
+
+      <main class="pages">
+
+        <!-- ============ PAGE: Create ============ -->
+        <section class="page" data-page="create">
+          <div class="create-workbench" data-create-view="edit" data-create-mode="video">
+            <div class="create-topbar">
+              <div class="create-mode-toggle" role="group" aria-label="Create mode">
+                <button type="button" class="create-mode-btn active" data-create-mode="video">Video</button>
+                <button type="button" class="create-mode-btn" data-create-mode="carousel">Carousel</button>
+              </div>
+              <div class="create-topbar-actions">
+                <div class="create-batch-wrap">
+                  <button type="button" class="btn" id="createBatchBtn" aria-expanded="false" aria-controls="createBatchPopover">Settings ▾</button>
+                  <div id="createBatchPopover" class="create-popover hidden" role="dialog" aria-label="Create settings">
+                    <label class="field batch-mode">Mode
+                      <select id="mode">
+                        <option value="matrix">Matrix — every video × every caption</option>
+                        <option value="pair">Pair — video 1 ↔ caption 1, video 2 ↔ caption 2 …</option>
+                      </select>
+                    </label>
+                    <label class="field template-field">Output name template
+                      <input id="nameTemplate" type="text" value="{video}_{caption-name}"
+                        placeholder="{caption-name}_{date}" />
+                    </label>
+                    <div class="template-params">
+                      <div class="template-param-row">
+                        <select id="nameParam" title="Insert a parameter"></select>
+                        <button id="insertNameParam" class="btn" type="button">Insert</button>
+                      </div>
+                      <p id="nameParamHint" class="param-hint"></p>
+                    </div>
+                    <label class="check"><input id="skipExisting" type="checkbox" checked /> Skip already-rendered pairs</label>
+                    <label class="check"><input id="dedupe" type="checkbox" checked /> Dedupe identical videos</label>
+                  </div>
+                </div>
+                <button type="button" class="btn" id="createOffersBtn">Offers</button>
+                <button type="button" class="btn" id="createRendersBtn">Renders</button>
+                <button type="button" class="btn" id="createPlanBtn">Plan</button>
+              </div>
+            </div>
+
+            <div class="create-phone-chips" role="tablist" aria-label="Create">
+              <button type="button" class="rack-tab" data-create-view="media" role="tab">Media</button>
+              <button type="button" class="rack-tab" data-create-view="captions" role="tab">Captions</button>
+              <button type="button" class="rack-tab active" data-create-view="edit" role="tab" aria-selected="true">Edit</button>
+              <button type="button" class="rack-tab" data-create-view="more" role="tab">More</button>
+            </div>
+
+            <div class="create-panes">
+              <aside class="create-left create-media-bin">
+                <div class="create-left-scroll">
+                  <div class="panel">
+                    <div class="panel-h2-row">
+                      <h2 class="rack-label">MEDIA</h2>
+                      <div class="row gap">
+                        <button type="button" class="btn" id="openLibraryBtn" title="Open library">Library</button>
+                        <button id="openPinterestBtn" class="btn" type="button">Pinterest</button>
+                      </div>
+                    </div>
+                    <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Add video or image files">
+                      <strong class="drop-copy-lg">Drop videos or images here</strong>
+                      <strong class="drop-copy-sm">Tap to add media</strong>
+                      <span class="drop-copy-lg">or click to browse — videos become sources, images become carousel slides</span>
+                      <span class="drop-copy-sm">mp4, mov, jpg, png, webp…</span>
+                      <input id="fileInput" type="file" accept="video/*,image/*,.mp4,.mov,.webm,.mkv,.avi,.m4v,.jpg,.jpeg,.png,.webp,.gif,.bmp" multiple hidden />
+                    </div>
+                    <div id="imageLibraryStatus" class="url-status"></div>
+                    <div id="createSourcesPanel" class="create-sources-panel create-video-only">
+                      <div class="panel-h2-row">
+                        <h2 class="rack-label">SOURCES</h2>
+                        <span class="param-hint" id="createSourcesHint">In this project — drag to reorder</span>
+                      </div>
+                      <div id="sourceListActions" class="source-list-actions hidden">
+                        <button id="removePinterestSources" class="btn ghost" type="button"
+                          title="Remove Pinterest videos from sources (they stay in the library)">Remove all Pinterest</button>
+                      </div>
+                      <ul id="sourceList" class="source-list create-sources-list" aria-label="Project sources"></ul>
+                      <p id="createSourcesEmpty" class="param-hint create-sources-empty">Drop videos or browse the library to add sources.</p>
+                    </div>
+                    <div class="create-storyboard-block create-carousel-only">
+                      <div class="panel-h2-row image-lib-heading">
+                        <h2 class="rack-label">SOURCES</h2>
+                        <div class="create-storyboard-meta">
+                          <span class="param-hint">Drag to reorder · ✕ removes</span>
+                          <button type="button" class="storyboard-text-btn" id="removeAllStoryboardBtn">Remove all</button>
+                        </div>
+                      </div>
+                      <div id="imageLibraryGrid" class="image-library-grid" aria-label="Carousel sources"></div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              <div class="create-right">
+                <div class="panel stage-panel">
+                  <div class="stage-panel-head">
+                    <h2 class="rack-label">STAGE</h2>
+                    <div class="row gap stage-panel-head-actions">
+                      <button type="button" class="btn" id="openLookBtn" title="Caption look">Aa Look</button>
+                      <button type="button" class="btn create-video-only" id="openEndCaptionBtn" title="End-of-video caption">End caption</button>
+                    </div>
+                  </div>
+                  <div class="stage-center-col">
+                  <div class="row gap wrap stage-pickers">
+                    <label class="field create-video-only">Video
+                      <select id="previewSource"><option value="">— pick a video —</option></select>
+                    </label>
+                    <label class="field create-carousel-only">Image
+                      <select id="previewCarouselImage"><option value="">— pick an image —</option></select>
+                    </label>
+                    <label class="field">Caption
+                      <select id="previewCaption"><option value="">— pick a caption —</option></select>
+                    </label>
+                    <div id="carouselSlideMeta" class="carousel-slide-meta create-carousel-only" aria-live="polite">0 / 0</div>
+                  </div>
+                  <div class="stage-center">
+                    <div class="stage-preview-shell">
+                      <button type="button" id="carouselPrevBtn" class="carousel-nav-btn create-carousel-only" aria-label="Previous slide" title="Previous slide">‹</button>
+                      <div id="previewFrame" class="preview-frame">
+                        <img id="previewBg" class="preview-bg" alt="" />
+                        <img id="previewOverlay" class="preview-overlay" alt="" />
+                        <div id="previewTikTokSafe" class="preview-tiktok-safe" aria-hidden="true">
+                          <div class="tts-top"></div>
+                          <div class="tts-right"></div>
+                          <div class="tts-bottom"></div>
+                        </div>
+                        <div id="previewHint" class="preview-hint">Add a video and a caption to preview</div>
+                      </div>
+                      <button type="button" id="carouselNextBtn" class="carousel-nav-btn create-carousel-only" aria-label="Next slide" title="Next slide">›</button>
+                    </div>
+                  </div>
+                  <div class="stage-tape create-video-only" aria-hidden="true"><div id="stageTapeFill" class="stage-tape-fill"></div></div>
+                  <div id="timelinePanel" class="timeline-panel hidden create-video-only">
+                    <div class="timeline-meta">
+                      <span id="timelineInLabel">0:00</span>
+                      <span id="timelineDurLabel" class="timeline-dur">0:00</span>
+                      <span id="timelineOutLabel">0:00</span>
+                    </div>
+                    <div id="timelineTrack" class="timeline-track" role="slider" aria-label="Clip trim">
+                      <div id="timelineRange" class="timeline-range"></div>
+                      <div id="timelineEndCap" class="timeline-endcap hidden" title="End caption"></div>
+                      <div id="timelineHandleIn" class="timeline-handle in" title="In point"></div>
+                      <div id="timelineHandleOut" class="timeline-handle out" title="Out point"></div>
+                    </div>
+                    <div class="timeline-legend">
+                      <span class="tl-leg clip">Clip</span>
+                      <span id="timelineEndCapLeg" class="tl-leg endcap hidden">End caption <span id="timelineEndCapDur"></span></span>
+                      <button id="timelineReset" class="btn ghost" type="button">Full length</button>
+                    </div>
+                  </div>
+                  <div class="row gap wrap stage-actions create-video-only">
+                    <button id="previewCrop" class="btn" type="button">Crop</button>
+                    <button id="previewEncode" class="btn" type="button">Encode preview</button>
+                  </div>
+                  </div>
+                  <video id="previewVideo" class="preview-video hidden" controls></video>
+                </div>
+
+                <div id="carouselStoryboard" class="carousel-storyboard create-carousel-only" aria-label="Carousel storyboard">
+                  <span class="rack-label">STORYBOARD</span>
+                  <div id="carouselStoryboardTrack" class="carousel-storyboard-track"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="create-hooks-strip create-captions-strip">
+              <div class="panel-h2-row">
+                <h2 class="rack-label">CAPTIONS</h2>
+                <div class="row gap wrap create-captions-toolbar">
+                  <button id="captionEmojiBtn" class="btn" type="button"
+                    title="Emoji picker" data-emoji-target="captionsInput">☺ Emoji</button>
+                  <button id="importCaptions" class="btn" type="button">Import CSV / TXT</button>
+                  <input id="captionFile" type="file" accept=".csv,.txt" hidden />
+                  <label class="check"><input id="preserveBreaks" type="checkbox" checked /> Preserve breaks</label>
+                  <label class="check"><input id="forceLower" type="checkbox" /> Force lowercase</label>
+                </div>
+              </div>
+              <p id="captionsContextHint" class="param-hint captions-context-hint">One caption per line for the whole job.</p>
+              <div class="caption-box-wrap">
+                <textarea id="captionsInput" rows="4"
+                  placeholder="One caption per line&#10;&#10;mood bc that wallet pass be paying u $2k per week to play games 😁😂😏&#10;when the grind finally starts paying off 💸"></textarea>
+              </div>
+            </div>
+
+            <div class="create-dock">
+              <div class="create-dock-main">
+                <div id="countChip" class="count-chip">0 videos × 0 captions = 0 videos</div>
+                <div id="estimate" class="estimate"></div>
+                <span class="grow"></span>
+                <button id="startBatch" class="btn create-dock-secondary create-video-only" type="button">Render</button>
+                <div class="create-upload-wrap">
+                  <button id="createUploadBtn" class="btn primary" type="button" aria-expanded="false" aria-controls="createUploadMenu">Upload <span class="caret" aria-hidden="true">▾</span></button>
+                  <div id="createUploadMenu" class="create-upload-menu hidden" role="menu">
+                    <button type="button" class="create-upload-opt primary" data-upload-mode="sparks" role="menuitem">Upload + Sparks</button>
+                    <button type="button" class="create-upload-opt muted" data-upload-mode="upload" role="menuitem">Upload</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Drawers / sheets -->
+            <div id="libraryDrawer" class="create-drawer hidden" aria-hidden="true">
+              <div class="create-drawer-backdrop" data-close-drawer="library"></div>
+              <aside class="create-drawer-panel create-library-drawer-panel" role="dialog" aria-label="Media library">
+                <div class="create-drawer-head">
+                  <h2 class="rack-label">LIBRARY</h2>
+                  <button type="button" class="btn ghost" id="libraryDrawerClose" data-close-drawer="library" title="Close">✕</button>
+                </div>
+                <p class="hint create-library-drawer-hint create-video-only">
+                  Click to select videos for this project. Nothing is added until you press Done. ✕ permanently deletes.
+                </p>
+                <p class="hint create-library-drawer-hint create-carousel-only">
+                  Past stills from uploads and Pinterest. Click a thumbnail to open it on the stage.
+                </p>
+                <div class="video-lib-filters create-video-only" data-lib-filters="create">
+                  <button type="button" class="video-lib-filter active" data-lib-filter="all">All</button>
+                  <button type="button" class="video-lib-filter" data-lib-filter="upload">Uploads</button>
+                  <button type="button" class="video-lib-filter" data-lib-filter="pinterest">Pinterest</button>
+                  <button type="button" class="video-lib-filter" data-lib-filter="tiktok">TikTok</button>
+                  <button type="button" class="video-lib-filter" data-lib-filter="youtube">YouTube</button>
+                </div>
+                <div id="videoLibraryGrid" class="video-library-grid create-library-drawer-grid create-video-only"></div>
+                <div class="video-lib-filters create-carousel-only" data-image-lib-filters="create">
+                  <button type="button" class="video-lib-filter active" data-image-lib-filter="all">All</button>
+                  <button type="button" class="video-lib-filter" data-image-lib-filter="upload">Uploads</button>
+                  <button type="button" class="video-lib-filter" data-image-lib-filter="pinterest">Pinterest</button>
+                </div>
+                <div id="createImageLibraryGrid" class="video-library-grid create-library-drawer-grid create-carousel-only"></div>
+                <div class="row gap wrap create-library-drawer-actions create-video-only">
+                  <span id="videoLibrarySelCount" class="param-hint grow"></span>
+                  <button id="videoLibraryDone" class="btn primary" type="button">Done</button>
+                </div>
+              </aside>
+            </div>
+
+            <div id="pinterestDrawer" class="create-drawer hidden" aria-hidden="true">
+              <div class="create-drawer-backdrop" data-close-drawer="pinterest"></div>
+              <aside class="create-drawer-panel" role="dialog" aria-label="Pinterest search">
+                <div class="create-drawer-head">
+                  <h2 class="rack-label">PINTEREST</h2>
+                  <button type="button" class="btn ghost" data-close-drawer="pinterest" title="Close">✕</button>
+                </div>
+                <div class="pinterest-search">
+                  <label class="field">Paste links
+                    <textarea id="urlInput" rows="3"
+                      placeholder="Paste TikTok / YouTube / Pinterest links, one per line"></textarea>
+                  </label>
+                  <div class="row gap wrap" style="margin-top:8px">
+                    <button id="addUrls" class="btn primary" type="button">Add links</button>
+                  </div>
+                  <div id="urlStatus" class="url-status"></div>
+                  <hr class="pinterest-divider" />
+                  <label class="field pinterest-search-field">Search Pinterest
+                    <div class="pinterest-search-row">
+                      <input id="pinterestQuery" type="text" placeholder="Keywords, e.g. luxury car night drive" />
+                      <select id="pinterestMediaType" title="Pin type" aria-label="Pin type">
+                        <option value="video">Videos</option>
+                        <option value="image">Images</option>
+                      </select>
+                      <button id="pinterestSearchBtn" class="pinterest-search-icon-btn" type="button" title="Search" aria-label="Search">
+                        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+                          <circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                          <path d="M10 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </label>
+                  <div id="pinterestSearchStatus" class="url-status"></div>
+                  <div id="pinterestResults" class="pinterest-results hidden"></div>
+                  <div id="pinterestAddRow" class="row gap wrap hidden">
+                    <button id="pinterestAddSelected" class="btn" type="button">Add selected</button>
+                    <button id="pinterestAddToLibrary" class="btn" type="button">Add to library</button>
+                  </div>
+                </div>
+              </aside>
+            </div>
+
+            <div id="lookDrawer" class="create-drawer hidden" aria-hidden="true">
+              <div class="create-drawer-backdrop" data-close-drawer="look"></div>
+              <aside class="create-drawer-panel" role="dialog" aria-label="Caption look">
+                <div class="create-drawer-head">
+                  <h2 class="rack-label">LOOK</h2>
+                  <button type="button" class="btn ghost" data-close-drawer="look" title="Close">✕</button>
+                </div>
+                <div class="studio-details-body">
+                  <div class="row gap wrap">
+                    <label class="field">Caption look
+                      <select id="captionMode">
+                        <option value="outline">Outline (stroke)</option>
+                        <option value="boxed">Wrapped box</option>
+                      </select>
+                    </label>
+                    <label class="field" id="strokePresetField">Outline preset
+                      <select id="strokePreset">
+                        <option value="thick">Thick outline (default)</option>
+                        <option value="thin">Thin outline</option>
+                      </select>
+                    </label>
+                    <label class="field">Position preset
+                      <select id="positionPreset">
+                        <option value="center">Center</option>
+                        <option value="lower">Lower third</option>
+                        <option value="upper">Upper</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="sliders">
+                    <label>Font size (% of height)
+                      <input id="sSize" type="range" min="2.8" max="8" step="0.1" />
+                      <output id="oSize"></output>
+                    </label>
+                    <label id="strokeSliderRow">Stroke (% of font)
+                      <input id="sStroke" type="range" min="6" max="20" step="0.5" />
+                      <output id="oStroke"></output>
+                    </label>
+                    <label id="boxPadSliderRow" class="hidden">Box padding (% of font)
+                      <input id="sBoxPad" type="range" min="15" max="70" step="1" />
+                      <output id="oBoxPad"></output>
+                    </label>
+                    <label id="boxRadiusSliderRow" class="hidden">Corner radius (% of font)
+                      <input id="sBoxRadius" type="range" min="5" max="60" step="1" />
+                      <output id="oBoxRadius"></output>
+                    </label>
+                    <label>Vertical position (%)
+                      <input id="sY" type="range" min="22" max="58" step="1" />
+                      <output id="oY"></output>
+                    </label>
+                    <label title="Left and right inset as % of frame width — higher shrinks the wrap width. Floor is the TikTok right-rail safe zone.">Constrict padding
+                      <input id="sPad" type="range" min="16" max="22" step="0.5" />
+                      <output id="oPad"></output>
+                    </label>
+                    <label>Weight
+                      <input id="sWeight" type="range" min="300" max="900" step="100" />
+                      <output id="oWeight"></output>
+                    </label>
+                    <label>Max lines
+                      <input id="sMaxLines" type="range" min="2" max="10" step="1" />
+                      <output id="oMaxLines"></output>
+                    </label>
+                  </div>
+                  <button id="resetStyle" class="btn ghost" type="button">Reset to locked defaults</button>
+                </div>
+              </aside>
+            </div>
+
+            <div id="endCaptionDrawer" class="create-drawer hidden" aria-hidden="true">
+              <div class="create-drawer-backdrop" data-close-drawer="endCaption"></div>
+              <aside class="create-drawer-panel" role="dialog" aria-label="End-of-video caption">
+                <div class="create-drawer-head">
+                  <h2 class="rack-label">END CAPTION</h2>
+                  <button type="button" class="btn ghost" data-close-drawer="endCaption" title="Close">✕</button>
+                </div>
+                <div id="videoDetail" class="video-detail empty create-endcap-drawer">
+                  <div class="video-detail-head">
+                    <h3 id="videoDetailName">Per-video end caption</h3>
+                  </div>
+                  <p id="videoDetailEmpty" class="video-detail-hint">
+                    Pick a video on stage (or in Sources), then turn on an end caption for the last few seconds.
+                  </p>
+                  <div id="videoDetailBody" class="video-detail-body hidden">
+                    <p class="video-detail-hint">Shows under the main caption for the last N seconds on every render of this video.</p>
+                    <label class="check">
+                      <input id="endCapEnabled" type="checkbox" /> Add end-of-video caption
+                    </label>
+                    <div class="end-cap-fields">
+                      <label class="field">Caption + emoji
+                        <div class="caption-input-wrap">
+                          <input id="endCapText" type="text" maxlength="80"
+                            placeholder="tap belowww 👇" />
+                          <button id="endCapEmojiBtn" class="emoji-trigger" type="button" title="Emoji"
+                            data-emoji-target="endCapText">☺</button>
+                        </div>
+                      </label>
+                      <label class="field slider-field">Duration
+                        <div class="row gap">
+                          <input id="endCapDuration" type="range" min="2" max="5" step="0.5" value="3" />
+                          <output id="endCapDurationOut">3s</output>
+                        </div>
+                      </label>
+                      <label class="field slider-field">Horizontal (left ← → right)
+                        <div class="row gap">
+                          <input id="endCapX" type="range" min="-40" max="40" step="1" value="0" />
+                          <output id="endCapXOut">0</output>
+                        </div>
+                      </label>
+                      <label class="field slider-field">Vertical (up ↑ ↓ down)
+                        <div class="row gap">
+                          <input id="endCapY" type="range" min="-40" max="40" step="1" value="0" />
+                          <output id="endCapYOut">0</output>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <hr class="pinterest-divider" />
+                <h2 class="rack-label">DEFAULT TEMPLATE</h2>
+                <p class="hint">Applied to every new video unless overridden per video above.</p>
+                <label class="check">
+                  <input id="endCapTemplateEnabled" type="checkbox" /> Enable default end caption
+                </label>
+                <label class="field">Template text
+                  <div class="caption-input-wrap">
+                    <input id="endCapTemplateText" type="text" maxlength="80"
+                      placeholder="tap belowww 👇" />
+                  </div>
+                </label>
+                <button id="endCapTemplateApply" class="btn" type="button">Apply to all videos without custom end caption</button>
+              </aside>
+            </div>
+
+            <div id="rendersSheet" class="create-sheet hidden" aria-hidden="true">
+              <div class="create-sheet-backdrop" data-close-sheet="renders"></div>
+              <div class="create-sheet-panel" role="dialog" aria-label="Rendered library">
+                <div class="create-drawer-head">
+                  <h2 class="rack-label">RENDERS</h2>
+                  <button type="button" class="btn ghost" data-close-sheet="renders" title="Close">✕</button>
+                </div>
+                <p class="hint">
+                  Finished renders, stored in your cloud library. Files older than
+                  <span id="retentionLabel">14</span> days are cleaned up automatically — download what you want to keep.
+                </p>
+                <div class="outputs-toolbar">
+                  <div class="outputs-toolbar-main">
+                    <div class="outputs-toolbar-left">
+                      <button id="outputsRefresh" class="btn" type="button">Refresh</button>
+                      <label class="check chat-select-all"><input id="outputsSelectAll" type="checkbox" /> Select all</label>
+                      <div class="video-lib-filters" data-output-filters>
+                        <button type="button" class="video-lib-filter active" data-output-filter="all">All</button>
+                        <button type="button" class="video-lib-filter" data-output-filter="unposted">Not posted</button>
+                        <button type="button" class="video-lib-filter" data-output-filter="posted">Posted</button>
+                        <button type="button" class="video-lib-filter" data-output-filter="failed">Failed</button>
+                      </div>
+                    </div>
+                    <div class="outputs-toolbar-right">
+                      <button id="outputsExportCsv" class="btn" type="button">Export CSV</button>
+                      <button id="outputsUploadSel" class="btn primary" type="button" disabled>Upload selected to TikTok</button>
+                      <button id="outputsUploadFb" class="btn hidden" type="button" disabled hidden aria-hidden="true">Upload selected to Facebook</button>
+                    </div>
+                  </div>
+                  <div class="outputs-toolbar-sub">
+                    <button id="outputsDeleteSel" class="btn danger" type="button" disabled>Delete selected</button>
+                    <div id="outputsMeta" class="param-hint"></div>
+                  </div>
+                </div>
+                <ul id="outputsList" class="outputs-list"></ul>
+              </div>
+            </div>
+
+            <div id="createMoreSheet" class="create-sheet hidden create-phone-only" aria-hidden="true">
+              <div class="create-sheet-backdrop" data-close-sheet="more"></div>
+              <div class="create-sheet-panel" role="dialog" aria-label="More">
+                <div class="create-drawer-head">
+                  <h2 class="rack-label">MORE</h2>
+                  <button type="button" class="btn ghost" data-close-sheet="more" title="Close">✕</button>
+                </div>
+                <div class="create-more-list">
+                  <button type="button" class="btn" id="morePinterestBtn">Pinterest</button>
+                  <button type="button" class="btn" id="moreLookBtn">Aa Look</button>
+                  <button type="button" class="btn" id="moreEndCaptionBtn">End caption</button>
+                  <button type="button" class="btn" id="moreBatchBtn">Settings</button>
+                  <button type="button" class="btn" id="moreRendersBtn">Renders</button>
+                  <button type="button" class="btn" id="morePlanBtn">Plan</button>
+                  <button type="button" class="btn" id="moreLibraryBtn">Library</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PAGE: Chat ============ -->
+        <section class="page hidden" data-page="chat">
+          <div class="chat-layout">
+            <div class="chat-main">
+              <div class="chat-toolbar row gap">
+                <select id="chatProvider" aria-label="Model provider"></select>
+                <select id="chatModel" aria-label="Model"></select>
+                <div class="chat-actions">
+                  <button id="chatPreviewBtn" class="btn" type="button">Plan</button>
+                  <button id="chatOffersBtn" class="btn" type="button">Offers</button>
+                </div>
+                <span class="grow"></span>
+                <button id="chatUsageToggle" class="btn ghost" type="button" aria-pressed="true">Usage</button>
+              </div>
+              <div id="chatMessages" class="chat-messages"></div>
+              <div id="chatConfirmSlot" class="chat-dock-slot"></div>
+              <div id="chatReviewSlot" class="chat-dock-slot"></div>
+              <div class="chat-composer-wrap">
+                <div id="chatAttachChips" class="chat-attach-chips" hidden></div>
+                <div id="chatSlashMenu" class="chat-slash-menu hidden" role="listbox" aria-label="Chat commands"></div>
+                <div class="chat-composer">
+                  <textarea id="chatInput" rows="2" placeholder="Ask for hooks, paste a TikTok ad URL for similar Pinterest images, or type / for commands…"></textarea>
+                  <div class="chat-composer-actions">
+                    <button id="chatVideosBtn" class="btn" type="button">Videos</button>
+                    <button id="chatImagesBtn" class="btn" type="button">Images</button>
+                    <button id="chatSendBtn" class="btn primary" type="button">Send</button>
+                  </div>
+                </div>
+              </div>
+              <div id="chatStatus" class="url-status"></div>
+            </div>
+            <aside class="chat-usage" id="chatUsagePanel" aria-label="Token usage">
+              <div class="chat-usage-head">
+                <h2>Usage</h2>
+                <button id="chatUsageClose" class="btn ghost chat-usage-close" type="button" title="Close" aria-label="Close usage">✕</button>
+              </div>
+              <div class="chat-usage-ranges" role="tablist" aria-label="Usage range">
+                <button type="button" class="chat-usage-range active" data-usage-range="session" role="tab" aria-selected="true">Session</button>
+                <button type="button" class="chat-usage-range" data-usage-range="today" role="tab" aria-selected="false">Today</button>
+                <button type="button" class="chat-usage-range" data-usage-range="week" role="tab" aria-selected="false">Week</button>
+                <button type="button" class="chat-usage-range" data-usage-range="lifetime" role="tab" aria-selected="false">Lifetime</button>
+              </div>
+              <div class="chat-usage-totals" id="chatUsageTotals"></div>
+              <ul class="chat-usage-models" id="chatUsageModels"></ul>
+              <p class="chat-usage-note">Tracking started when this feature shipped.</p>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ============ PAGE: Business Centers ============ -->
+        <section class="page hidden" data-page="bcs">
+          <div class="bc-sheet">
+            <div class="bc-toolbar">
+              <div class="bc-toolbar-row row gap wrap">
+                <button type="button" class="btn primary" id="bcSparkLaunchBtn">Launch with Sparks</button>
+                <button type="button" class="btn" id="bcCreateBtn">Warm up profiles</button>
+                <button type="button" class="btn" id="bcImportBtn">Load in AdsPower profile</button>
+                <button type="button" class="btn" id="bcSalesBtn" disabled title="Needs Scheduled white-hat">Load sparks</button>
+                <button type="button" class="btn" id="bcMarkPaymentAddedBtn">Mark payment added</button>
+                <button type="button" class="btn" id="bcMarkSuspendedBtn">Mark suspended</button>
+                <button type="button" class="btn" id="bcClearSuspendedBtn">Clear suspended</button>
+                <button type="button" class="btn" id="bcMarkDisapprovedBtn">Mark disapproved</button>
+                <button type="button" class="btn" id="bcClearDisapprovedBtn">Clear disapproved</button>
+                <button type="button" class="btn" id="bcMarkWhBtn">Mark white-hat approved</button>
+                <button type="button" class="btn" id="bcClearWhBtn">Clear white-hat approved</button>
+                <button type="button" class="btn" id="bcLoadBrowserBtn" title="Create or start the AdsPower browser from the saved fingerprint, proxy, and cookies">Load browser</button>
+                <button type="button" class="btn" id="bcOpenAdsBtn">Open Ads Manager</button>
+                <button type="button" class="btn" id="bcManualCompleteBtn">Manual login complete</button>
+                <button type="button" class="btn" id="bcAskChatBtn">Ask chat</button>
+                <button type="button" class="btn" id="bcExportCsvBtn">Export CSV</button>
+                <button type="button" class="btn" id="bcCopySheetBtn">Copy sheet</button>
+                <button type="button" class="btn" id="bcRefreshBtn">Refresh</button>
+                <button type="button" class="btn" id="bcAddBalanceBtn" disabled title="Not implemented yet">Add BC balance</button>
+                <button type="button" class="btn" id="bcRaiseBudgetBtn" disabled title="Not implemented yet">Raise day-one budget</button>
+                <button type="button" class="btn" id="bcSyncInsightsBtn" title="Read advertiser status and spend from the TikTok API">Sync insights</button>
+              </div>
+              <div class="bc-toolbar-meta row gap wrap">
+                <span id="bcWorkerChip" class="bc-chip" role="status">Worker …</span>
+                <span id="bcSpendChip" class="bc-chip" role="status">Mercury …</span>
+                <input id="bcSearch" class="bc-search" type="search" placeholder="Search email, BC, notes, account id…" />
+              </div>
+              <div class="bc-views row gap wrap" id="bcViewFilters" role="tablist" aria-label="Saved views">
+                <button type="button" class="bc-view-btn active" data-bc-view="">All</button>
+                <button type="button" class="bc-view-btn" data-bc-view="warming_up">Warming up</button>
+                <button type="button" class="bc-view-btn" data-bc-view="ads_ready">Ads-ready</button>
+                <button type="button" class="bc-view-btn" data-bc-view="white_hat_pending">White-hat pending</button>
+                <button type="button" class="bc-view-btn" data-bc-view="payment_required">Payment required</button>
+                <button type="button" class="bc-view-btn" data-bc-view="disapproved">Disapproved</button>
+                <button type="button" class="bc-view-btn" data-bc-view="suspended">Suspended</button>
+                <button type="button" class="bc-view-btn" data-bc-view="failed">Failed</button>
+                <button type="button" class="bc-view-btn" data-bc-view="needs_manual_login">Needs manual login</button>
+              </div>
+              <div id="bcJobStrip" class="bc-job-strip hidden" aria-live="polite"></div>
+            </div>
+            <div class="bc-table-wrap">
+              <table class="bc-table" id="bcTable">
+                <thead>
+                  <tr>
+                    <th class="bc-col-check"><input type="checkbox" id="bcSelectAll" title="Select all visible" /></th>
+                    <th></th>
+                    <th>Profile</th>
+                    <th>Status</th>
+                    <th>Health</th>
+                    <th>Revenue</th>
+                    <th>Spend</th>
+                    <th>CPC</th>
+                    <th>CPM</th>
+                    <th>Results</th>
+                  </tr>
+                </thead>
+                <tbody id="bcTableBody">
+                  <tr class="bc-loading-row"><td colspan="10" class="hint"><span class="spin" aria-hidden="true"></span> Loading Business Centers…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PAGE: Settings ============ -->
+        <section class="page hidden" data-page="sparks">
+          <div class="bc-sheet spark-sheet">
+            <div class="bc-toolbar">
+              <div class="bc-toolbar-meta row gap wrap">
+                <span id="sparkCount" class="bc-chip">Sparks</span>
+                <span id="sparkSyncChip" class="bc-chip">Spend …</span>
+                <span id="sparkRouteChip" class="bc-chip">Routing …</span>
+                <input id="sparkSearch" class="bc-search" type="search" placeholder="Search ad, offer, campaign, account" />
+                <button type="button" class="btn" id="sparkRefreshBtn">Refresh</button>
+                <button type="button" class="btn" id="sparkPostbackBtn">Copy postback URL</button>
+              </div>
+              <details class="spark-routing" id="sparkRouting">
+                <summary>Offer landers and networks</summary>
+                <div id="sparkRoutingBody" class="spark-routing-body"></div>
+              </details>
+            </div>
+            <div class="bc-table-wrap">
+              <table class="bc-table" id="sparkTable">
+                <thead>
+                  <tr>
+                    <th data-sort="name">Ad</th>
+                    <th data-sort="video">Video</th>
+                    <th data-sort="launched">Launched</th>
+                    <th data-sort="status">Status</th>
+                    <th data-sort="offer">Offer</th>
+                    <th data-sort="lander">Lander</th>
+                    <th data-sort="network">Network</th>
+                    <th data-sort="campaign">Campaign</th>
+                    <th data-sort="account">Account</th>
+                    <th data-sort="spend">Spend</th>
+                    <th data-sort="impressions">Impr.</th>
+                    <th data-sort="clicks">Clicks</th>
+                    <th data-sort="conversions">TikTok conv</th>
+                    <th data-sort="affConversions">Aff conv</th>
+                    <th data-sort="affRevenue">Aff revenue</th>
+                  </tr>
+                </thead>
+                <tbody id="sparkTableBody">
+                  <tr><td colspan="15" class="hint">Loading sparks…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="spark-variants" id="sparkVariants"></div>
+          </div>
+        </section>
+        <section class="page hidden" data-page="settings">
+          <div class="settings-layout">
+            <nav class="settings-nav" aria-label="Settings">
+              <button type="button" class="settings-nav-btn active" data-settings="appearance">Appearance</button>
+              <button type="button" class="settings-nav-btn" data-settings="downloads">Downloads</button>
+              <button type="button" class="settings-nav-btn" data-settings="ai">AI &amp; storage</button>
+              <button type="button" class="settings-nav-btn hidden" data-settings="facebook" hidden aria-hidden="true">Facebook</button>
+              <button type="button" class="settings-nav-btn" data-settings="tiktok">TikTok</button>
+              <button type="button" class="settings-nav-btn" data-settings="bc">Business Center</button>
+              <button type="button" class="settings-nav-btn" data-settings="upload">Upload</button>
+            </nav>
+            <div class="settings-body">
+              <div class="settings-pane is-active" data-settings-pane="appearance">
+                <div class="panel">
+                  <h2>Appearance</h2>
+                  <div class="theme-seg" role="group" aria-label="Theme">
+                    <button type="button" class="theme-seg-btn" data-theme-set="dark">Dark</button>
+                    <button type="button" class="theme-seg-btn" data-theme-set="light">Light</button>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-pane hidden" data-settings-pane="downloads">
+                <div class="panel">
+                  <h2>Link downloads</h2>
+                  <p class="param-hint">
+                    If TikTok / YouTube / Pinterest block downloads from the server, upload a
+                    <code>cookies.txt</code> exported from your browser — it is used only for your link downloads.
+                  </p>
+                  <div class="row gap wrap">
+                    <button id="ytCookiesUploadBtn" class="btn" type="button">Upload cookies.txt</button>
+                    <input id="ytCookiesFile" type="file" accept=".txt" hidden />
+                    <button id="ytCookiesRemoveBtn" class="btn danger" type="button">Remove</button>
+                    <span id="ytCookiesStatus" class="param-hint"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-pane hidden" data-settings-pane="ai">
+                <div class="panel">
+                  <h2>AI providers</h2>
+                  <div id="aiProvidersStatus" class="param-hint"></div>
+                  <h3 class="subhead">Storage &amp; limits</h3>
+                  <p id="settingsInfo" class="param-hint"></p>
+                </div>
+              </div>
+
+              <div class="settings-pane hidden" data-settings-pane="facebook">
+              <div class="panel">
+                <h2>Facebook Ads</h2>
+                <p class="hint">
+                  Connect with Facebook Login for Business. Ads are created <strong>paused</strong>
+                  in Ads Manager — you turn them on after review.
+                </p>
+                <details class="settings-help">
+                  <summary>Setup notes</summary>
+                  <p class="param-hint">
+                  Skip <strong>Settings → Advanced → Domain Manager</strong> and skip
+                  <strong>App domains</strong> for local use (Meta rejects localhost / 127.0.0.1 there).
+                  Skip <strong>App authentication → Authorize callback URL</strong>.
+                  In <strong>Settings → Basic</strong> add a Website platform with Site URL
+                  <code>https://localhost:8765/</code>.
+                  Then open <strong>Facebook Login for Business → Settings</strong>, turn on
+                  Client OAuth Login and Web OAuth Login, and add
+                  <code>https://localhost:8765/api/oauth/callback</code>
+                  Facebook Login is blocked in AdsPower and other antidetect browsers
+                  (Google sign-in does not help). Connect once in normal Chrome with the
+                  same Google account, or paste an <code>EAA…</code> token from
+                  <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer</a>.
+                  If you need a different Facebook user, add them as Tester/Developer under
+                  Meta App Roles — Development mode only allows people with a role.
+                  </p>
+                </details>
+                <p id="fbNotConfigured" class="param-hint hidden">
+                  Server is missing <code>META_APP_ID</code> / <code>META_APP_SECRET</code>
+                  in <code>.env</code> (local) or Wrangler secrets (deploy). Also set
+                  <code>META_REDIRECT_URI</code> to
+                  <code>https://localhost:8765/api/oauth/callback</code>.
+                  Restart the Python server after saving.
+                </p>
+                <div id="fbConnectBlock">
+                  <div class="row gap wrap">
+                    <button id="fbConnectBtn" class="btn primary" type="button">Connect Facebook</button>
+                    <button id="fbCopyUrlBtn" class="btn ghost" type="button">Copy login link</button>
+                    <button id="fbDisconnectBtn" class="btn danger hidden" type="button">Disconnect</button>
+                  </div>
+                  <p id="fbStatus" class="url-status"></p>
+                  <label class="field">Paste redirect URL, code, or access token
+                    <textarea id="fbPasteCode" rows="2" placeholder="callback?code=…   or   EAA… token from Graph API Explorer"></textarea>
+                  </label>
+                  <button id="fbPasteBtn" class="btn" type="button">Finish login from paste</button>
+                </div>
+                <div id="fbDefaults" class="hidden">
+                  <h3 class="subhead">Defaults</h3>
+                  <label class="field">Ad account
+                    <select id="fbAdAccount"></select>
+                  </label>
+                  <label class="field">Facebook Page
+                    <select id="fbPage"></select>
+                  </label>
+                  <label class="field">Pixel
+                    <select id="fbPixel"></select>
+                  </label>
+                  <label class="field">Pixel event
+                    <select id="fbEvent">
+                      <option value="PURCHASE">Purchase</option>
+                      <option value="LEAD">Lead</option>
+                      <option value="COMPLETE_REGISTRATION">Complete registration</option>
+                      <option value="ADD_TO_CART">Add to cart</option>
+                      <option value="INITIATED_CHECKOUT">Initiate checkout</option>
+                      <option value="SUBSCRIBE">Subscribe</option>
+                      <option value="CONTACT">Contact</option>
+                      <option value="CONTENT_VIEW">View content</option>
+                    </select>
+                  </label>
+                  <div class="row gap wrap">
+                    <label class="field">Daily budget (USD)
+                      <input id="fbBudget" type="number" min="1" step="1" value="20" />
+                    </label>
+                    <label class="field">Bid
+                      <select id="fbBidStrategy">
+                        <option value="LOWEST_COST_WITHOUT_CAP">Lowest cost (no cap)</option>
+                        <option value="LOWEST_COST_WITH_BID_CAP">Bid cap</option>
+                      </select>
+                    </label>
+                    <label class="field">Bid cap (USD)
+                      <input id="fbBidAmount" type="number" min="0.01" step="0.01" placeholder="optional" />
+                    </label>
+                  </div>
+                  <button id="fbSaveDefaults" class="btn" type="button">Save Facebook defaults</button>
+                </div>
+              </div>
+              </div>
+
+              <div class="settings-pane hidden" data-settings-pane="tiktok">
+              <div class="panel">
+                <h2>TikTok accounts</h2>
+                <p class="hint">
+                  <strong>Refresh Cookies (AdsPower)</strong> opens a new AdsPower browser with a random datacenter proxy.
+                  Sign in to TikTok Ads there, and cookies will be automatically extracted and stored.
+                  Selected accounts upload in <strong>per-video round-robin</strong>.
+                </p>
+                <div class="tt-account-toolbar row gap wrap">
+                  <input id="ttAccountName" type="text" placeholder="Account label (optional)" maxlength="80" />
+                  <button id="ttRefreshCookies" class="btn primary" type="button">Refresh Cookies (AdsPower)</button>
+                  <button id="ttImportCookies" class="btn ghost" type="button">Remote browser</button>
+                </div>
+                <div id="ttCookieStatus" class="url-status"></div>
+                <div id="ttLoginStatus" class="url-status"></div>
+                <ul id="ttAccountList" class="tt-account-list"></ul>
+
+                <h3 class="subhead">Already have cookies?</h3>
+                <p class="param-hint">
+                  Paste a <code>sessionid</code>, a Network <code>Cookie</code> header, curl, or cookies.txt.
+                  Import verifies the session with TikTok.
+                </p>
+                <textarea id="ttImportText" rows="2" placeholder="sessionid, Cookie header, curl, or cookies.txt"></textarea>
+                <div class="row gap wrap">
+                  <button id="ttImportBtn" class="btn" type="button">Import cookies</button>
+                  <button id="ttImportFileBtn" class="btn" type="button">Upload cookies.txt</button>
+                  <input id="ttImportFile" type="file" accept=".txt" hidden />
+                </div>
+              </div>
+              </div>
+
+              <div class="settings-pane hidden" data-settings-pane="bc">
+              <div class="panel" id="bcFinancePanel">
+                <div id="bcFinanceLoading" class="pane-loading hidden" role="status" aria-live="polite">
+                  <span class="spin" aria-hidden="true"></span>
+                  <span>Loading Business Center settings…</span>
+                </div>
+                <div id="bcFinanceBody">
+                <h2>Business Center billing</h2>
+                <p class="param-hint">
+                  Choose the Business Centers per profile and additional Ads Manager accounts per BC. VAT and the
+                  primary card apply to every new BC. Add-balance defaults to $10.
+                  Mercury daily cap is $50 until you raise it.
+                </p>
+                <div id="bcSpendBanner" class="tt-incident-banner hidden" role="status"></div>
+                <h3 class="subhead">AdsPower host</h3>
+                <p class="param-hint">
+                  Named browser host (this PC, VPS, Mac). Active host URL + API key
+                  drive the embedded provision worker. Stopgap until a 24/7 AdsPower VPS.
+                </p>
+                <label class="field">Active host
+                  <select id="bcHostId"></select>
+                </label>
+                <p class="param-hint" id="bcHostHint">No AdsPower host saved yet.</p>
+                <div class="row gap wrap" id="bcHostActions">
+                  <button type="button" class="btn" id="bcHostEditBtn" disabled>Edit host</button>
+                  <button type="button" class="btn" id="bcHostDeleteBtn" disabled>Delete host</button>
+                </div>
+                <p class="param-hint" id="bcWorkerHostHint"></p>
+                <label class="field">VAT
+                  <select id="bcVatId"></select>
+                </label>
+                <label class="field">Add-balance amount (USD)
+                  <input id="bcAddAmount" type="number" min="10" step="1" value="10" />
+                </label>
+                <label class="field">Mercury daily spend cap (USD)
+                  <input id="bcDailyLimit" type="number" min="0" step="1" value="50" />
+                </label>
+                <label class="field">Ad accounts per BC
+                  <input id="bcExtraAdAccounts" type="number" min="1" max="21" step="1" value="1" />
+                </label>
+                <p class="param-hint">Includes the seed account. Up to 21 ad accounts can be created per BC.</p>
+                <fieldset class="field" id="bcBusinessCentersPerProfile">
+                  <legend>Business Centers per profile</legend>
+                  <label class="check"><input type="radio" name="bcBusinessCentersPerProfile" value="1" checked /> 1 BC</label>
+                  <label class="check"><input type="radio" name="bcBusinessCentersPerProfile" value="2" disabled /> 2 BCs (coming soon)</label>
+                  <label class="check"><input type="radio" name="bcBusinessCentersPerProfile" value="3" disabled /> 3 BCs (coming soon)</label>
+                </fieldset>
+                <label class="field">Day-one one-time budget (USD)
+                  <input id="bcAdBudget" type="number" min="0" step="1" value="5" />
+                </label>
+
+                <h3 class="subhead">White-hat Reach</h3>
+                <p class="param-hint">
+                  Spark paste used only for the white-hat Reach campaign (not DuoPlus
+                  offer packs on the BCs sheet). The Reach warm-up runs on the seed account.
+                  Timezone follows billing geo (Stockholm for SE). Real ads stay blocked
+                  until white-hat shows <strong>Scheduled</strong>.
+                </p>
+                <label class="field">White-hat Spark paste
+                  <select id="bcSparkCodeId"></select>
+                </label>
+
+                <h3 class="subhead">Sales campaign defaults</h3>
+                <p class="param-hint">
+                  Defaults only — Load sparks, chat, or a per-run payload can override
+                  bid, budget, landing URL, CTAs, and sparks. Instant Page Sales ads,
+                  one Spark per ad (max 10). Publish stays off until
+                  <code>PROVISION_SALES_PUBLISH=1</code>.
+                </p>
+                <label class="field">Conversion bid (USD)
+                  <input id="bcSalesBid" type="number" min="0" step="0.01" value="0.4" />
+                </label>
+                <label class="field">Daily budget (USD)
+                  <input id="bcSalesBudget" type="number" min="0" step="1" value="20" />
+                </label>
+                <label class="field">Default landing URL
+                  <select id="bcSalesLanding"></select>
+                </label>
+                <p class="param-hint">Pick an offer URL, or leave blank to use the offer chosen at load time.</p>
+                <label class="field">Instant Page button
+                  <input id="bcSalesInstantCta" type="text" value="Continue" />
+                </label>
+                <label class="field">Creative CTA
+                  <input id="bcSalesCreativeCta" type="text" value="Learn more" />
+                </label>
+                <label class="check">
+                  <input id="bcSalesDisplayCard" type="checkbox" checked />
+                  Display card (TAP HERE)
+                </label>
+                <label class="field">Ad name template
+                  <input id="bcSalesAdName" type="text" value="{offer}-{i}" />
+                </label>
+                <label class="field">Ad text
+                  <input id="bcSalesCreativeText" type="text" placeholder="Optional creative text" />
+                </label>
+                <h3 class="subhead">Primary card</h3>
+                <p class="param-hint" id="bcCardHint">Cardholder is the name saved on the card, not the BC slug. Pick a saved card or create one.</p>
+                <label class="field">Card
+                  <select id="bcCardId"></select>
+                </label>
+
+                <h3 class="subhead">Billing address rotation</h3>
+                <p class="param-hint" id="bcAddressHint">
+                  Warm-up cycles Stockholm streets/postals. Pin one address to reuse it, or add a custom row to the pool.
+                </p>
+                <div id="bcAddressStats" class="param-hint"></div>
+                <div class="row gap wrap" style="margin: 0.4rem 0 0.6rem">
+                  <button type="button" class="btn" id="bcAddressAddBtn">Add address…</button>
+                  <button type="button" class="btn" id="bcAddressUnpinBtn">Clear pin (rotate)</button>
+                  <button type="button" class="btn" id="bcAddressResetBtn">Reset cursor</button>
+                </div>
+                <div id="bcAddressList" class="bc-settings-list"></div>
+
+                <h3 class="subhead">Webshare proxies</h3>
+                <p class="param-hint" id="bcProxyHint">
+                  Residential (geo) and data center proxies. Refresh each pool from Webshare separately; “Request new IPs” spends an on-demand refresh on the residential plan when available.
+                </p>
+                <div id="bcProxyStats" class="param-hint"></div>
+                <div class="row gap wrap" style="margin: 0.4rem 0 0.6rem">
+                  <button type="button" class="btn" id="bcProxyRefreshResidentialBtn">Refresh residential proxies</button>
+                  <button type="button" class="btn" id="bcProxyRefreshDatacenterBtn">Refresh data center proxies</button>
+                  <button type="button" class="btn" id="bcProxyIpRefreshBtn">Request new IPs</button>
+                </div>
+                <div id="bcProxyList" class="bc-settings-list"></div>
+
+                <button id="bcSaveFinance" class="btn" type="button">Save Business Center settings</button>
+                </div>
+              </div>
+              </div>
+
+              <div class="settings-pane hidden" data-settings-pane="upload">
+              <div class="panel">
+                <h2>Upload settings</h2>
+                <div id="ttIncidentBanner" class="tt-incident-banner hidden" role="status"></div>
+                <label class="field">Upload engine
+                  <select id="ttUploadEngine">
+                    <option value="studio">TikTok Studio (browser)</option>
+                    <option value="http">HTTP API (fast)</option>
+                  </select>
+                </label>
+                <p class="param-hint" id="ttEngineHint">
+                  Studio drives the TikTok Studio UI in a browser. HTTP posts via TikTok’s web upload
+                  endpoints (faster; needs complete cookies from Remote browser). Login is the same for both.
+                </p>
+                <label class="field">Caption template
+                  <input id="ttCaptionTemplate" type="text" value="{caption}"
+                    placeholder="{caption} {account_suffix}" />
+                </label>
+                <p class="param-hint">Tokens: {caption} {filename} {account} {account_suffix} {index} {index01}</p>
+                <label class="field">Hashtags
+                  <input id="ttHashtags" type="text" value="" placeholder="#fyp #viral" />
+                </label>
+                <p class="param-hint">Appended after the template. Separate with spaces or commas.</p>
+                <div class="row gap wrap">
+                  <label class="field">Delay between uploads (seconds)
+                    <input id="ttDelay" type="number" min="0" max="3600" step="5" value="10" />
+                  </label>
+                  <label class="field">Min seconds between posts / account
+                    <input id="ttMinGap" type="number" min="0" max="3600" step="5" value="60" />
+                  </label>
+                </div>
+                <div class="settings-checks">
+                  <label class="check"><input id="ttAutoUpload" type="checkbox" /> Auto-upload when batch finishes</label>
+                  <label class="check"><input id="ttContinueOnError" type="checkbox" checked /> Continue on error</label>
+                  <label class="check" id="ttCopyrightChecksWrap"><input id="ttCopyrightChecks" type="checkbox" checked /> Automatic copyright checks</label>
+                  <label class="check" id="ttContentChecksWrap"><input id="ttContentChecks" type="checkbox" checked /> Content checks</label>
+                </div>
+                <p class="param-hint" id="ttStudioChecksHint">Controls TikTok Studio's Music copyright check and Content check lite on upload.</p>
+                <button id="ttSaveSettings" class="btn" type="button">Save upload settings</button>
+
+                <h3 class="subhead">MCP (Claude / OpenClaw / Cursor)</h3>
+                <p class="param-hint">
+                  Long-lived API key for
+                  <code>https://ttcaptiontool.com/mcp</code>
+                  (Streamable HTTP). In-app Chat uses the agent loop with thread
+                  plans and confirm cards. The Worker MCP proxy adds session,
+                  confirm, and <code>get_spark_job</code>. Trusted keys skip
+                  confirm cards. Copy the key once when created.
+                </p>
+                <label class="field">Label
+                  <input id="mcpKeyLabel" type="text" placeholder="Phone Claude" maxlength="80" />
+                </label>
+                <label class="field">Mode
+                  <select id="mcpKeyMode">
+                    <option value="trusted">Trusted (no confirm)</option>
+                    <option value="confirm">Confirm required</option>
+                  </select>
+                </label>
+                <button id="mcpKeyCreate" class="btn primary" type="button">Create MCP key</button>
+                <p id="mcpKeyOnce" class="url-status"></p>
+                <ul id="mcpKeyList" class="tt-account-list"></ul>
+
+                <h3 class="subhead">Test upload</h3>
+                <p class="param-hint" id="ttTestUploadHint">
+                  Runs one probe with the same short vertical video, but a <strong>new title and
+                  description</strong> every time (different from each other) so you can confirm
+                  TikTok got the update. Uses your current upload engine and the first selected
+                  account. HTTP tests post as <strong>private</strong> when possible. Settings are
+                  locked while the test runs.
+                </p>
+                <div class="row gap wrap">
+                  <button id="ttTestUploadBtn" class="btn primary" type="button">Test upload</button>
+                  <span id="ttTestUploadStatus" class="url-status"></span>
+                </div>
+
+                <h3 class="subhead">Upload already rendered</h3>
+                <p class="param-hint">
+                  Pick videos in the <strong>Renders</strong> sheet on the Create page and press
+                  <em>Upload selected to TikTok</em>.
+                </p>
+                <div id="ttOutputMeta" class="param-hint"></div>
+                <div id="tiktokUploadPanelStandalone" class="tiktok-upload-panel hidden">
+                  <div class="progress-head">
+                    <h3 class="progress-mode-title">TikTok upload</h3>
+                    <div class="progress-head-actions">
+                      <button id="continueTikTokUploadStandalone" class="btn primary hidden" type="button">Continue</button>
+                      <button id="cancelTikTokUploadStandalone" class="btn danger hidden" type="button">Cancel upload</button>
+                    </div>
+                  </div>
+                  <div id="tiktokUploadSummaryStandalone" class="progress-summary"></div>
+                  <div class="bar"><div id="tiktokUploadBarStandalone" class="bar-fill"></div></div>
+                  <ul id="tiktokUploadListStandalone" class="job-list"></ul>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+      <div id="dockBackdrop" class="dock-backdrop hidden" aria-hidden="true"></div>
+      <div id="progressPanel" class="job-progress-dock hidden" data-collapsed="true" style="--pct: 0">
+        <div id="dockStrip" class="dock-strip" role="button" tabindex="0"
+             aria-expanded="false" aria-controls="dockBody" title="Toggle activity details">
+          <span class="dock-handle" aria-hidden="true"></span>
+          <span class="dock-edge"><span id="dockEdgeFill" class="dock-edge-fill"></span></span>
+          <span id="dockStatusDot" class="dock-dot running" aria-hidden="true"></span>
+          <span id="dockPillLabel" class="dock-pill-label" aria-hidden="true"></span>
+          <span id="dockChips" class="dock-chips"></span>
+          <span id="dockKind" class="dock-kind">Render</span>
+          <span id="dockSummary" class="dock-summary"></span>
+          <span id="dockEta" class="dock-eta"></span>
+          <span class="dock-actions" id="dockActions">
+            <button id="uploadToTikTok" class="btn primary hidden" type="button">Upload to TikTok</button>
+            <button id="continueTikTokUpload" class="btn primary hidden" type="button">Continue</button>
+            <button id="cancelBatch" class="btn danger ghost hidden" type="button">Cancel</button>
+            <button id="cancelTikTokUpload" class="btn danger ghost hidden" type="button">Cancel</button>
+            <button id="cancelFacebookAds" class="btn danger ghost hidden" type="button">Cancel</button>
+            <button id="cancelProvision" class="btn danger ghost hidden" type="button">Cancel</button>
+            <button id="dockDismiss" class="btn ghost dock-dismiss hidden" type="button" title="Dismiss">✕</button>
+          </span>
+          <span class="dock-chevron" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 10l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </div>
+        <div id="dockBody" class="dock-body">
+          <div class="dock-body-inner">
+            <div class="dock-body-scroll">
+            <div id="renderProgressBlock">
+              <div id="progressSummary" class="progress-summary"></div>
+              <div class="bar"><div id="progressBar" class="bar-fill"></div></div>
+              <ul id="jobList" class="job-list"></ul>
+            </div>
+            <div id="tiktokUploadPanel" class="tiktok-upload-panel hidden">
+              <div id="tiktokUploadSummary" class="progress-summary"></div>
+              <div class="bar"><div id="tiktokUploadBar" class="bar-fill"></div></div>
+              <ul id="tiktokUploadList" class="job-list"></ul>
+            </div>
+            <div id="sparkFetchPanel" class="tiktok-upload-panel hidden">
+              <div id="sparkFetchSummary" class="progress-summary"></div>
+              <div class="bar"><div id="sparkFetchBar" class="bar-fill"></div></div>
+              <ul id="sparkFetchList" class="job-list"></ul>
+            </div>
+            <div id="provisionProgressPanel" class="tiktok-upload-panel hidden">
+              <div id="provisionProgressSummary" class="progress-summary"></div>
+              <div class="bar"><div id="provisionProgressBar" class="bar-fill"></div></div>
+              <ul id="provisionProgressList" class="job-list"></ul>
+            </div>
+            <div id="facebookAdsPanel" class="tiktok-upload-panel hidden" hidden aria-hidden="true">
+              <div id="facebookAdsSummary" class="progress-summary"></div>
+              <div class="bar"><div id="facebookAdsBar" class="bar-fill"></div></div>
+              <ul id="facebookAdsList" class="job-list"></ul>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav id="mobileTabs" class="mobile-tabs" aria-label="App">
+      <button type="button" class="nav-item" data-nav="chat" title="Chat" aria-label="Chat">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 3h10M3 8h10M3 13h6"/></svg></span><span class="nav-label">Chat</span>
+      </button>
+      <button type="button" class="nav-item active" data-nav="create" title="Create" aria-label="Create">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13"/><path d="M8 5v6M5 8h6"/></svg></span><span class="nav-label">Create</span>
+      </button>
+      <button type="button" class="nav-item" data-nav="bcs" title="Business Centers" aria-label="Business Centers">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2.5 3.5h11v9h-11z" fill="none" stroke="currentColor"/><path d="M2.5 6.5h11M5.5 3.5v9M8.5 6.5v6" fill="none" stroke="currentColor"/></svg></span><span class="nav-label">BCs</span>
+      </button>
+      <button type="button" class="nav-item" data-nav="sparks" title="Sparks" aria-label="Sparks">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 1.5l1.6 4.2H14l-3.5 2.6 1.3 4.2L8 10.2 4.2 12.5l1.3-4.2L2 5.7h4.4z" fill="none" stroke="currentColor"/></svg></span><span class="nav-label">Sparks</span>
+      </button>
+      <button type="button" class="nav-item" data-nav="settings" title="Settings" aria-label="Settings">
+        <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h10"/><circle cx="6" cy="4" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="7.5" cy="12" r="1.2"/></svg></span><span class="nav-label">Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Offers slide-over (hooks UI) -->
+  <div id="chatOffersPanel" class="slide-over hidden" role="dialog" aria-modal="true" aria-label="Offers and hooks">
+    <div class="slide-over-backdrop" id="chatOffersBackdrop"></div>
+    <div class="slide-over-card">
+      <div class="slide-over-head">
+        <h2>Offers &amp; hooks</h2>
+        <button id="chatOffersClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="slide-over-body hooks-panel-grid">
+        <div class="col hooks-col-left">
+          <div class="panel hooks-panel-offers">
+            <h2 class="hooks-section-title">Offers</h2>
+            <p class="hint">
+              Add affiliate offers and paste <strong>winner hooks</strong> under each one.
+              Generation learns from winners and liked results.
+            </p>
+            <div class="hooks-offer-form">
+              <label class="field">Name
+                <input id="hooksOfferName" type="text" maxlength="120" placeholder="Offer name" />
+              </label>
+              <label class="field">Affiliate link
+                <input id="hooksOfferUrl" type="url" maxlength="2000" placeholder="https://…" />
+              </label>
+              <label class="field">Notes (optional)
+                <textarea id="hooksOfferNotes" rows="2" maxlength="2000"
+                  placeholder="Audience, pain points, product angle…"></textarea>
+              </label>
+              <div class="hooks-payout-grid">
+                <label class="field">Payout type
+                  <select id="hooksOfferPayoutType">
+                    <option value="unknown">Unknown</option>
+                    <option value="cpa">CPA / per result</option>
+                    <option value="flat">Flat</option>
+                    <option value="rev_share">Rev share</option>
+                  </select>
+                </label>
+                <label class="field">Amount (USD)
+                  <input id="hooksOfferPayoutAmount" type="number" min="0" step="0.01" placeholder="e.g. 40" />
+                </label>
+                <label class="field">Share %
+                  <input id="hooksOfferPayoutShare" type="number" min="0" max="100" step="0.1" placeholder="e.g. 50" />
+                </label>
+              </div>
+              <label class="field">Payout note
+                <input id="hooksOfferPayoutNote" type="text" maxlength="500" placeholder="Rough share, geo, etc." />
+              </label>
+              <div class="hooks-form-actions">
+                <button id="hooksOfferSave" class="btn primary" type="button">Add offer</button>
+                <button id="hooksOfferCancelEdit" class="btn ghost hidden" type="button">Cancel edit</button>
+              </div>
+              <input id="hooksOfferEditId" type="hidden" value="" />
+            </div>
+            <ul id="hooksOfferList" class="hooks-offer-list"></ul>
+          </div>
+
+          <div class="panel hooks-panel-winners">
+            <h2 class="hooks-section-title">Winner hooks</h2>
+            <p id="hooksWinnerHint" class="param-hint">Select an offer to manage winner hooks.</p>
+            <div id="hooksWinnerBody" class="hidden">
+              <div class="hooks-inline-input">
+                <input id="hooksWinnerInput" type="text" maxlength="280"
+                  placeholder="Paste a winning hook…" />
+                <button id="hooksWinnerAdd" class="btn primary" type="button">Add</button>
+              </div>
+              <input id="hooksWinnerEditId" type="hidden" value="" />
+              <ul id="hooksWinnerList" class="hooks-item-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="col hooks-col-right">
+          <div class="panel hooks-panel-generate">
+            <h2 class="hooks-section-title">Generate new hooks</h2>
+            <label class="field">Offer
+              <select id="hooksGenOffer"></select>
+            </label>
+            <label class="field">Extra instructions (optional)
+              <textarea id="hooksGenExtra" rows="2" maxlength="1000"
+                placeholder="e.g. shorter, curiosity-gap, money angle…"></textarea>
+            </label>
+            <label class="field hooks-check">
+              <input id="hooksRandomWord" type="checkbox" checked />
+              Random word per hook (10th-grade vocab, 3rd-grade sentence)
+            </label>
+            <div class="hooks-gen-options">
+              <label class="field">Count
+                <select id="hooksGenCount">
+                  <option value="2">2</option>
+                  <option value="5" selected>5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                </select>
+              </label>
+              <label class="field">Mode
+                <select id="hooksGenMode">
+                  <option value="variations">Variations of winners</option>
+                  <option value="mix">Mix — variations + new ideas</option>
+                  <option value="new_angles">New angles (research offer)</option>
+                </select>
+              </label>
+            </div>
+            <div class="hooks-form-actions">
+              <button id="hooksGenerateBtn" class="btn primary" type="button">Generate</button>
+              <button id="hooksUseCaptionsBtn" class="btn hidden" type="button">Use as captions</button>
+              <button id="hooksCopyAllBtn" class="btn ghost hidden" type="button">Copy all</button>
+            </div>
+            <div id="hooksGenStatus" class="url-status hooks-gen-status"></div>
+            <ul id="hooksGenResults" class="hooks-result-list"></ul>
+          </div>
+
+          <div class="panel hooks-panel-history">
+            <h2 class="hooks-section-title">Generation history</h2>
+            <label class="field hooks-history-filter">Browse by offer
+              <select id="hooksHistoryOffer">
+                <option value="">All offers</option>
+              </select>
+            </label>
+            <div id="hooksHistoryList" class="hooks-history-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat: videos modal -->
+  <div id="chatVideosModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Chat videos">
+    <div class="crop-modal-backdrop" id="chatVideosBackdrop"></div>
+    <div class="crop-modal-card">
+      <div class="crop-modal-head">
+        <h3>Thread videos</h3>
+        <button id="chatVideosClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="video-tabs" role="tablist" aria-label="Video source">
+        <button type="button" class="video-tab active" data-videos-tab="add" role="tab" aria-selected="true">Add</button>
+        <button type="button" class="video-tab" data-videos-tab="library" role="tab" aria-selected="false">Library</button>
+      </div>
+      <div class="crop-modal-body">
+      <div id="chatVideosAddPane">
+      <p class="hint">Add videos for this chat thread. End-caption settings apply to the selected row.</p>
+      <div id="chatDropZone" class="drop-zone" tabindex="0" role="button" aria-label="Add video files">
+        <strong class="drop-copy-lg">Drop video files here</strong>
+        <strong class="drop-copy-sm">Tap to add videos</strong>
+        <span class="drop-copy-lg">or click to browse</span>
+        <span class="drop-copy-sm">mp4, mov, webm, mkv</span>
+        <input id="chatFileInput" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.m4v" multiple hidden />
+      </div>
+      <div class="url-row">
+        <textarea id="chatUrlInput" rows="2" placeholder="Paste links, one per line"></textarea>
+        <div class="url-controls">
+          <button id="chatAddUrls" class="btn" type="button">Add links</button>
+        </div>
+      </div>
+      <div id="chatUrlStatus" class="url-status"></div>
+      <label class="field">Search Pinterest videos
+        <div class="url-row">
+          <input id="chatPinterestQuery" type="text" placeholder="Keywords" />
+          <div class="url-controls">
+            <button id="chatPinterestSearchBtn" class="btn" type="button">Search</button>
+          </div>
+        </div>
+      </label>
+      <div id="chatPinterestStatus" class="url-status"></div>
+      <div id="chatPinterestResults" class="pinterest-results hidden"></div>
+      <div id="chatPinterestAddRow" class="row gap wrap hidden">
+        <button id="chatPinterestAddSelected" class="btn" type="button">Add to chat</button>
+        <button id="chatPinterestAddToLibrary" class="btn" type="button">Add to library</button>
+      </div>
+      <ul id="chatSourceList" class="source-list"></ul>
+      <div id="chatVideoDetail" class="video-detail empty">
+        <div class="video-detail-head">
+          <h3>End-of-video caption (selected)</h3>
+        </div>
+        <p id="chatVideoDetailEmpty" class="video-detail-hint">Select a video above to edit its end caption.</p>
+        <div id="chatVideoDetailBody" class="video-detail-body hidden">
+          <label class="check">
+            <input id="chatEndCapEnabled" type="checkbox" /> Add end-of-video caption
+          </label>
+          <div class="end-cap-fields">
+            <label class="field">Caption + emoji
+              <div class="caption-input-wrap">
+                <input id="chatEndCapText" type="text" maxlength="80" placeholder="tap belowww 👇" />
+                <button id="chatEndCapEmojiBtn" class="emoji-trigger" type="button" title="Emoji"
+                  data-emoji-target="chatEndCapText">☺</button>
+              </div>
+            </label>
+            <label class="field slider-field">Duration
+              <div class="row gap">
+                <input id="chatEndCapDuration" type="range" min="2" max="5" step="0.5" value="3" />
+                <output id="chatEndCapDurationOut">3s</output>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div id="chatVideosLibraryPane" class="hidden">
+        <p class="hint">Every video you’ve uploaded or downloaded (Pinterest, TikTok, YouTube). Click to add or remove from this job. ✕ permanently deletes.</p>
+        <div class="video-lib-filters" data-lib-filters="chat">
+          <button type="button" class="video-lib-filter active" data-lib-filter="all">All</button>
+          <button type="button" class="video-lib-filter" data-lib-filter="upload">Uploads</button>
+          <button type="button" class="video-lib-filter" data-lib-filter="pinterest">Pinterest</button>
+          <button type="button" class="video-lib-filter" data-lib-filter="tiktok">TikTok</button>
+          <button type="button" class="video-lib-filter" data-lib-filter="youtube">YouTube</button>
+        </div>
+        <div id="chatLibraryGrid" class="video-library-grid"></div>
+      </div>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <span class="grow"></span>
+        <button id="chatVideosDone" class="btn primary" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat: images modal -->
+  <div id="chatImagesModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Chat images">
+    <div class="crop-modal-backdrop" id="chatImagesBackdrop"></div>
+    <div class="crop-modal-card">
+      <div class="crop-modal-head">
+        <h3>Thread images</h3>
+        <button id="chatImagesClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="video-tabs" role="tablist" aria-label="Image source">
+        <button type="button" class="video-tab active" data-images-tab="add" role="tab" aria-selected="true">Add</button>
+        <button type="button" class="video-tab" data-images-tab="library" role="tab" aria-selected="false">Library</button>
+      </div>
+      <div class="crop-modal-body">
+        <div id="chatImagesAddPane">
+          <p class="hint">Upload stills for photo carousels, or search Pinterest images. Selected images attach to this chat.</p>
+          <div id="chatImageDropZone" class="drop-zone" tabindex="0" role="button" aria-label="Add image files">
+            <strong class="drop-copy-lg">Drop image files here</strong>
+            <strong class="drop-copy-sm">Tap to add images</strong>
+            <span class="drop-copy-lg">or click to browse (jpg, png, webp)</span>
+            <span class="drop-copy-sm">jpg, png, webp</span>
+            <input id="chatImageFileInput" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp" multiple hidden />
+          </div>
+          <div id="chatImageUploadStatus" class="url-status"></div>
+          <label class="field">Search Pinterest images
+            <div class="url-row">
+              <input id="chatImagePinterestQuery" type="text" placeholder="Keywords" />
+              <div class="url-controls">
+                <button id="chatImagePinterestSearchBtn" class="btn" type="button">Search</button>
+              </div>
+            </div>
+          </label>
+          <div id="chatImagePinterestStatus" class="url-status"></div>
+          <div id="chatImagePinterestResults" class="pinterest-results hidden"></div>
+          <div id="chatImagePinterestAddRow" class="row gap wrap hidden">
+            <button id="chatImagePinterestAddSelected" class="btn" type="button">Add to chat</button>
+          </div>
+        </div>
+        <div id="chatImagesLibraryPane" class="hidden">
+          <p class="hint">Every still you’ve uploaded or saved from Pinterest / chat. Click to attach or remove. ✕ permanently deletes.</p>
+          <div class="video-lib-filters" data-image-lib-filters="chat">
+            <button type="button" class="video-lib-filter active" data-image-lib-filter="all">All</button>
+            <button type="button" class="video-lib-filter" data-image-lib-filter="upload">Uploads</button>
+            <button type="button" class="video-lib-filter" data-image-lib-filter="chat">Chat</button>
+            <button type="button" class="video-lib-filter" data-image-lib-filter="pinterest">Pinterest</button>
+          </div>
+          <div id="chatImageLibraryGrid" class="video-library-grid"></div>
+        </div>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <span class="grow"></span>
+        <button id="chatImagesDone" class="btn primary" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video library picker kept for legacy close hooks; Create uses #libraryDrawer -->
+  <div id="videoLibraryModal" class="crop-modal hidden" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Video library">
+    <div class="crop-modal-backdrop" id="videoLibraryBackdrop"></div>
+    <div class="crop-modal-card">
+      <div class="crop-modal-head">
+        <h3>Video library</h3>
+        <button id="videoLibraryClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat: pick captions from /all -->
+  <div id="chatCaptionPickModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Pick captions">
+    <div class="crop-modal-backdrop" id="chatCaptionPickBackdrop"></div>
+    <div class="crop-modal-card chat-caption-pick-card">
+      <div class="crop-modal-head">
+        <h3>Pick captions</h3>
+        <button id="chatCaptionPickClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+      <p class="hint">Choose which hooks to keep in this chat’s plan, or have a model pick favorites. Skip if you do not want this.</p>
+      <div class="row gap wrap chat-caption-pick-toolbar">
+        <button id="chatCaptionPickSelectAll" class="btn" type="button">Select all</button>
+        <button id="chatCaptionPickSelectNone" class="btn" type="button">Deselect all</button>
+        <span class="grow"></span>
+        <span id="chatCaptionPickCount" class="param-hint"></span>
+      </div>
+      <div id="chatCaptionPickList" class="chat-caption-pick-list"></div>
+      <div class="chat-caption-pick-ai">
+        <div class="chat-caption-pick-ai-label">AI favorites</div>
+        <div class="row gap wrap chat-caption-pick-ai-row">
+          <label class="field">Provider
+            <select id="chatCaptionPickProvider"></select>
+          </label>
+          <label class="field">Model
+            <select id="chatCaptionPickModel"></select>
+          </label>
+          <label class="field chat-caption-pick-n">How many
+            <input id="chatCaptionPickN" type="number" min="1" max="80" step="1" value="8" />
+          </label>
+          <button id="chatCaptionPickAiBtn" class="btn" type="button">Pick favorites</button>
+        </div>
+        <div id="chatCaptionPickAiStatus" class="url-status"></div>
+      </div>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <button id="chatCaptionPickSkip" class="btn ghost" type="button">Skip</button>
+        <span class="grow"></span>
+        <button id="chatCaptionPickGo" class="btn primary" type="button">Save to plan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat: pick models for /multiple -->
+  <div id="chatMultipleModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Pick models">
+    <div class="crop-modal-backdrop" id="chatMultipleBackdrop"></div>
+    <div class="crop-modal-card chat-multiple-card">
+      <div class="crop-modal-head">
+        <h3>Multiple models</h3>
+        <button id="chatMultipleClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+        <p class="hint">Choose which models run your prompt. Mix providers freely — replies show in rows, and caption picks keep each model’s label on the Plan.</p>
+        <div class="row gap wrap chat-multiple-toolbar">
+          <button id="chatMultipleSelectAll" class="btn" type="button">Select all</button>
+          <button id="chatMultipleSelectNone" class="btn" type="button">Clear</button>
+          <span class="grow"></span>
+          <span id="chatMultipleCount" class="param-hint"></span>
+        </div>
+        <div id="chatMultipleList" class="chat-multiple-list"></div>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <button id="chatMultipleCancel" class="btn ghost" type="button">Cancel</button>
+        <span class="grow"></span>
+        <button id="chatMultipleGo" class="btn primary" type="button" disabled>Use selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat: preview / render plan spreadsheet -->
+  <div id="chatPreviewModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Render plan">
+    <div class="crop-modal-backdrop" id="chatPreviewBackdrop"></div>
+    <div class="crop-modal-card chat-plan-card">
+      <div class="crop-modal-head">
+        <button id="chatPlanSidebarToggle" class="btn ghost chat-plan-sidebar-toggle" type="button"
+          aria-expanded="false" aria-controls="chatPlanSidebar" title="Choose a plan">
+          <span id="chatPreviewTitle">Render plan</span>
+          <span id="chatPlanCount" class="chat-plan-count" aria-hidden="true"></span>
+          <span class="chat-plan-disclosure" aria-hidden="true">&#9662;</span>
+        </button>
+        <div class="chat-plan-name-row">
+          <input id="workspacePlanName" type="text" maxlength="120" placeholder="Plan name" aria-label="Plan name" />
+          <button id="workspacePlanActivateBtn" class="btn" type="button" title="Save and set as the active workspace plan">This is the plan</button>
+        </div>
+        <button id="chatPreviewClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="chat-plan-layout is-plans-collapsed">
+        <aside id="chatPlanSidebar" class="chat-plan-sidebar" aria-label="Plans" hidden>
+          <div class="chat-plan-sidebar-head">
+            <h4 id="chatPlanSidebarTitle">Plans</h4>
+            <button id="chatPlanNewBtn" class="btn ghost" type="button" title="New empty plan">New</button>
+          </div>
+          <ul id="chatPlanList" class="chat-plan-list"></ul>
+        </aside>
+        <div class="chat-plan-main">
+          <div id="chatPreviewMeta" class="param-hint chat-plan-meta"></div>
+          <div class="crop-modal-body chat-plan-body">
+            <div class="chat-plan-table-wrap">
+              <table class="chat-plan-table" id="chatPreviewTable">
+                <thead>
+                  <tr>
+                    <th class="chat-plan-check"></th>
+                    <th class="chat-plan-num">#</th>
+                    <th>Media</th>
+                    <th>Caption</th>
+                    <th>Rendered</th>
+                    <th>TikTok</th>
+                    <th>Spark</th>
+                    <th>Model / source</th>
+                  </tr>
+                </thead>
+                <tbody id="chatPreviewTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="chat-plan-actions">
+            <label class="check chat-select-all"><input id="chatPreviewSelectAll" type="checkbox" /> Select all</label>
+            <button id="chatPreviewSelectNotPosted" class="btn" type="button">Select not posted</button>
+            <label class="check" title="Include end captions from source videos in the render"><input id="chatPreviewUseEndCaptions" type="checkbox" checked /> End captions</label>
+            <span id="chatPreviewEta" class="estimate chat-plan-eta"></span>
+            <label class="chat-plan-account">
+              <span class="chat-plan-account-label">Post as</span>
+              <select id="chatPreviewAccount" title="TikTok account for uploads from this plan (overrides Settings)">
+                <option value="">Settings round-robin…</option>
+              </select>
+            </label>
+            <button id="chatPreviewCopySparksBtn" class="btn ghost hidden" type="button" title="Copy every available Spark code from this plan">Copy all sparks</button>
+            <span class="grow"></span>
+            <button id="chatPreviewMakeBtn" class="btn primary" type="button">Render</button>
+            <button id="chatPreviewUploadBtn" class="btn primary" type="button">Upload</button>
+            <button id="chatPreviewFetchSparkBtn" class="btn primary" type="button" disabled>Sparks</button>
+            <button id="createPlanConfirmBtn" class="btn primary create-plan-confirm-btn hidden" type="button">Confirm · Render</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="chatPlanHover" class="chat-plan-hover hidden" aria-hidden="true">
+      <video id="chatPlanHoverVideo" muted loop playsinline preload="metadata"></video>
+    </div>
+  </div>
+
+  <!-- Chat: results modal -->
+  <div id="chatResultsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Chat renders">
+    <div class="crop-modal-backdrop" id="chatResultsBackdrop"></div>
+    <div class="crop-modal-card">
+      <div class="crop-modal-head">
+        <h3>Rendered outputs</h3>
+        <button id="chatResultsClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-toolbar chat-media-toolbar">
+        <div id="chatResultsMeta" class="param-hint chat-media-meta"></div>
+        <div class="chat-media-toolbar-row">
+          <label class="check chat-select-all"><input id="chatResultsSelectAll" type="checkbox" /> Select all</label>
+          <button id="chatResultsUploadBtn" class="btn primary" type="button">Upload selected to TikTok</button>
+        </div>
+      </div>
+      <div class="crop-modal-body">
+      <div id="chatResultsGrid" class="chat-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crop selection modal -->
+  <div id="cropModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Crop video">
+    <div class="crop-modal-backdrop" id="cropModalBackdrop"></div>
+    <div class="crop-modal-card">
+      <div class="crop-modal-head">
+        <h3 id="cropModalTitle">Crop video</h3>
+        <button id="cropModalClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+      <p class="hint">Drag to place a 9:16 crop kept for every render of this video. Move the box or resize with handles — aspect ratio stays locked.</p>
+      <div id="cropStage" class="crop-stage">
+        <img id="cropImage" alt="" draggable="false" />
+        <div id="cropMask" class="crop-mask" aria-hidden="true"></div>
+        <div id="cropBox" class="crop-box hidden">
+          <span class="crop-handle nw" data-handle="nw"></span>
+          <span class="crop-handle ne" data-handle="ne"></span>
+          <span class="crop-handle sw" data-handle="sw"></span>
+          <span class="crop-handle se" data-handle="se"></span>
+          <span class="crop-handle n" data-handle="n"></span>
+          <span class="crop-handle s" data-handle="s"></span>
+          <span class="crop-handle e" data-handle="e"></span>
+          <span class="crop-handle w" data-handle="w"></span>
+        </div>
+      </div>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <button id="cropReset" class="btn ghost" type="button">Max 9:16</button>
+        <button id="cropClear" class="btn ghost" type="button">Clear crop</button>
+        <span class="grow"></span>
+        <button id="cropCancel" class="btn" type="button">Cancel</button>
+        <button id="cropApply" class="btn primary" type="button">Apply crop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sign in with this Chrome: open TikTok tab + paste cookies -->
+  <div id="cookieHelperModal" class="remote-login-modal hidden" role="dialog" aria-modal="true" aria-label="Sign in with this Chrome">
+    <div class="crop-modal-backdrop" id="cookieHelperBackdrop"></div>
+    <div class="remote-login-card cookie-helper-card">
+      <div class="crop-modal-head">
+        <h3 id="cookieHelperTitle">Sign in with this Chrome</h3>
+        <button id="cookieHelperClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <p class="hint">
+        TikTok opens in a new tab in <strong>this</strong> browser. Sign in there like normal,
+        then paste cookies below. This page cannot read TikTok cookies itself.
+      </p>
+      <p class="hint tt-http-cookie-callout">
+        <strong>For HTTP API (fast) upload:</strong> paste the <em>entire</em> Cookie header
+        (not just <code>sessionid</code>). You need <code>tt-target-idc</code> and friends.
+        Sessionid-only works for Studio, but HTTP will show “incomplete cookies.”
+      </p>
+      <ol class="cookie-helper-steps">
+        <li>Sign in on the TikTok tab if needed (skip if you already see For You).</li>
+        <li>
+          <strong>Recommended for HTTP (full cookies):</strong> on the TikTok tab press
+          <kbd>F12</kbd> → <strong>Network</strong> → reload the page → click the first
+          <code>www.tiktok.com</code> document → <strong>Headers</strong> →
+          <strong>Request Headers</strong> → <strong>Cookie</strong> → copy the
+          <em>whole</em> long line (starts with several <code>name=value;</code> pairs)
+          → paste it in the box below. “Copy as cURL” also works.
+        </li>
+        <li>
+          <strong>Studio-only shortcut:</strong> Application → Cookies →
+          <code>sessionid</code> → copy Value. (Not enough for HTTP.)
+        </li>
+        <li>
+          Or use <em>Use remote browser</em> — that saves a full TikTok cookie dump
+          automatically (best if Network feels fiddly).
+        </li>
+      </ol>
+      <label class="field">Account label
+        <input id="cookieHelperName" type="text" maxlength="80" placeholder="Account label (optional)" />
+      </label>
+      <textarea id="cookieHelperText" rows="4" placeholder="Paste full Cookie header (best for HTTP), curl, or sessionid"></textarea>
+      <div id="cookieHelperMsg" class="url-status"></div>
+      <div class="row gap wrap">
+        <button id="cookieHelperSave" class="btn primary" type="button">Save &amp; verify</button>
+        <button id="cookieHelperReopen" class="btn" type="button">Reopen TikTok tab</button>
+        <button id="cookieHelperRemote" class="btn ghost" type="button">Use remote browser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TikTok engine test-upload result sheet -->
+  <div id="ttTestResultModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Test upload result">
+    <div class="crop-modal-backdrop" id="ttTestResultBackdrop"></div>
+    <div class="crop-modal-card tt-test-result-card">
+      <div class="crop-modal-head">
+        <h3 id="ttTestResultTitle">Test upload</h3>
+        <button id="ttTestResultClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+        <div id="ttTestResultBadge" class="tt-test-badge"></div>
+        <dl id="ttTestResultMeta" class="tt-test-meta"></dl>
+        <div id="ttTestResultWhy" class="tt-test-why hidden"></div>
+        <p id="ttTestResultPost" class="tt-test-post hidden"></p>
+      </div>
+      <div class="crop-modal-actions row gap wrap">
+        <button id="ttTestResultOk" class="btn primary" type="button">OK</button>
+        <a id="ttTestResultOpenPost" class="btn hidden" href="#" target="_blank" rel="noopener">Open post</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TikTok upload incident / error explanation -->
+  <div id="ttUploadIncidentModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Upload issue">
+    <div class="crop-modal-backdrop" id="ttIncidentBackdrop"></div>
+    <div class="crop-modal-card tt-incident-card">
+      <div class="crop-modal-head">
+        <h3 id="ttIncidentTitle">Upload issue</h3>
+        <button id="ttIncidentClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+        <p id="ttIncidentMessage" class="tt-incident-message"></p>
+        <p class="param-hint"><strong>What to do</strong></p>
+        <p id="ttIncidentFix" class="tt-incident-fix"></p>
+        <details class="tt-incident-tech">
+          <summary>Technical details</summary>
+          <pre id="ttIncidentTech" class="tt-incident-pre"></pre>
+          <button id="ttIncidentCopy" class="btn ghost" type="button">Copy details</button>
+        </details>
+      </div>
+      <div class="crop-modal-actions row gap wrap">
+        <button id="ttIncidentOpenAccounts" class="btn primary" type="button">Open TikTok accounts</button>
+        <button id="ttIncidentSwitchStudio" class="btn" type="button">Switch to Studio engine</button>
+        <button id="ttIncidentAck" class="btn" type="button">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remote TikTok login modal -->
+  <div id="remoteLoginModal" class="remote-login-modal hidden" role="dialog" aria-modal="true" aria-label="TikTok sign-in">
+    <div class="crop-modal-backdrop" id="remoteLoginBackdrop"></div>
+    <div class="remote-login-card">
+      <div class="crop-modal-head">
+        <h3>TikTok sign-in (remote browser)</h3>
+        <span class="live-badge">LIVE</span>
+        <button id="remoteLoginClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <p class="hint">
+        Scan the QR, then tap <strong>Confirm</strong> on your phone. The checkmark only means
+        the code was read. If a Chrome window opened on this PC, scan <em>that</em> window —
+        not this preview (it is delayed and will get stuck).
+      </p>
+      <div id="remoteScreenWrap" class="remote-screen-wrap" tabindex="0">
+        <img id="remoteScreen" class="remote-screen" alt="Remote browser screen" draggable="false" />
+        <div id="remoteScreenHint" class="preview-hint">Starting remote browser…</div>
+      </div>
+      <input id="remoteTypeInput" class="remote-type-input" type="text" autocomplete="off"
+        placeholder="Type here to send text to the remote page" />
+      <div id="remoteLoginMsg" class="url-status"></div>
+      <div class="row gap wrap">
+        <button id="remoteLoginCancel" class="btn danger" type="button">Cancel sign-in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Facebook ads destination modal -->
+  <div id="fbAdsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Facebook ads">
+    <div class="crop-modal-backdrop" id="fbAdsBackdrop"></div>
+    <div class="crop-modal-card fb-ads-card">
+      <div class="crop-modal-head">
+        <h3>Upload to Facebook Ads</h3>
+        <button id="fbAdsClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+      <p id="fbAdsHint" class="hint">Ads are created paused. Connect Facebook in Settings first.</p>
+      <label class="field">Destination
+        <select id="fbAdsMode">
+          <option value="new_campaign">New campaign + new ad set</option>
+          <option value="new_adset">Existing campaign, new ad set</option>
+          <option value="existing_adset">Existing campaign + existing ad set</option>
+        </select>
+      </label>
+      <label class="field hidden" id="fbAdsCampaignWrap">Campaign
+        <select id="fbAdsCampaign"></select>
+      </label>
+      <label class="field hidden" id="fbAdsAdsetWrap">Ad set
+        <select id="fbAdsAdset"></select>
+      </label>
+      <label class="field" id="fbAdsCampaignNameWrap">New campaign name
+        <input id="fbAdsCampaignName" type="text" maxlength="200" placeholder="Caption Tool campaign" />
+      </label>
+      <label class="field" id="fbAdsAdsetNameWrap">New ad set name
+        <input id="fbAdsAdsetName" type="text" maxlength="200" placeholder="Caption Tool ad set" />
+      </label>
+      <label class="field">Landing URL
+        <input id="fbAdsLanding" type="url" maxlength="2000" placeholder="https://…" />
+      </label>
+      <div class="row gap wrap" id="fbAdsBudgetRow">
+        <label class="field">Daily budget (USD)
+          <input id="fbAdsBudget" type="number" min="1" step="1" value="20" />
+        </label>
+        <label class="field">Bid
+          <select id="fbAdsBidStrategy">
+            <option value="LOWEST_COST_WITHOUT_CAP">Lowest cost (no cap)</option>
+            <option value="LOWEST_COST_WITH_BID_CAP">Bid cap</option>
+          </select>
+        </label>
+        <label class="field">Bid cap (USD)
+          <input id="fbAdsBidAmount" type="number" min="0.01" step="0.01" placeholder="optional" />
+        </label>
+      </div>
+      <label class="field" id="fbAdsPixelWrap">Pixel
+        <select id="fbAdsPixel"></select>
+      </label>
+      <label class="field" id="fbAdsEventWrap">Pixel event
+        <select id="fbAdsEvent">
+          <option value="PURCHASE">Purchase</option>
+          <option value="LEAD">Lead</option>
+          <option value="COMPLETE_REGISTRATION">Complete registration</option>
+          <option value="ADD_TO_CART">Add to cart</option>
+          <option value="SUBSCRIBE">Subscribe</option>
+        </select>
+      </label>
+      <p id="fbAdsMsg" class="url-status"></p>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <button id="fbAdsSubmit" class="btn primary" type="button">Create paused ads</button>
+        <button id="fbAdsCancel" class="btn ghost" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ttUploadSheet" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Upload to TikTok">
+    <div class="crop-modal-backdrop" id="ttUploadSheetBackdrop"></div>
+    <div class="crop-modal-card tt-upload-sheet-card">
+      <div class="crop-modal-head">
+        <h3 id="ttSheetTitle">Upload to TikTok</h3>
+        <button id="ttUploadSheetClose" class="btn ghost" type="button" title="Close">✕</button>
+      </div>
+      <div class="crop-modal-body">
+      <div id="ttSheetSetup">
+      <p id="ttSheetAccountSummary" class="hint">Loading accounts…</p>
+      <div id="ttSheetVideos" class="tt-sheet-videos"></div>
+      <div class="tt-sheet-form">
+      <label class="field">Caption template
+        <input id="ttSheetTemplate" type="text" autocomplete="off" placeholder="{caption} {account_suffix}" />
+      </label>
+      <label class="field">Hashtags
+        <input id="ttSheetHashtags" type="text" autocomplete="off" placeholder="#fyp #viral" />
+      </label>
+      <label class="field">Delay between uploads (seconds)
+        <input id="ttSheetDelay" type="number" min="0" max="3600" step="5" value="10" />
+      </label>
+      <p id="ttSheetEta" class="estimate"></p>
+      <div class="tt-sheet-checks">
+        <label class="check"><input id="ttSheetContinueOnError" type="checkbox" checked /> Continue on error</label>
+        <label class="check"><input id="ttSheetCopyrightChecks" type="checkbox" checked /> Automatic copyright checks</label>
+        <label class="check"><input id="ttSheetContentChecks" type="checkbox" checked /> Content checks</label>
+        <label class="check"><input id="ttSheetSaveDefaults" type="checkbox" /> Save as defaults</label>
+      </div>
+      <p id="ttSheetMsg" class="url-status"></p>
+      </div>
+      </div>
+      <div id="ttSheetProgress" class="tt-sheet-progress hidden">
+        <p id="ttSheetProgressSummary" class="progress-summary">Uploading…</p>
+        <div class="bar"><div id="ttSheetProgressBar" class="bar-fill"></div></div>
+        <ul id="ttSheetProgressList" class="job-list"></ul>
+        <p class="hint">Uploads keep running if you close this tab — reopen the app to see progress.</p>
+      </div>
+      <div id="ttSheetResults" class="tt-sheet-results hidden">
+        <p id="ttSheetResultsSummary" class="progress-summary">Upload finished</p>
+        <ul id="ttSheetResultsList" class="job-list tt-sheet-results-list"></ul>
+        <p id="ttSheetResultsSparkStatus" class="hint"></p>
+      </div>
+      </div>
+      <div class="row gap wrap crop-modal-actions">
+        <button id="ttSheetStart" class="btn primary" type="button">Start upload</button>
+        <button id="ttSheetContinue" class="btn primary hidden" type="button">Continue</button>
+        <button id="ttSheetCancelUpload" class="btn danger hidden" type="button">Cancel upload</button>
+        <button id="ttSheetCopySparks" class="btn primary hidden" type="button">Copy all sparks</button>
+        <button id="ttSheetCopyLinks" class="btn hidden" type="button">Copy video links</button>
+        <button id="ttSheetDone" class="btn ghost hidden" type="button">Done</button>
+        <button id="ttSheetCancel" class="btn ghost" type="button">Cancel</button>
+        <button id="ttSheetHide" class="btn ghost hidden" type="button">Hide</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apple-style emoji picker (shared) -->
+  <div id="emojiPicker" class="emoji-picker hidden" role="dialog" aria-label="Emoji picker">
+    <div class="emoji-picker-search">
+      <input id="emojiSearch" type="search" placeholder="Search emoji" autocomplete="off" />
+    </div>
+    <div id="emojiCats" class="emoji-cats" role="tablist"></div>
+    <div id="emojiGrid" class="emoji-grid"></div>
+  </div>
+
+  <!-- BC: create / warm-up modal -->
+  <div id="bcCreateModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Launch profiles">
+    <div class="crop-modal-backdrop" aria-hidden="true"></div>
+    <div class="crop-modal-card bc-modal-card">
+      <div class="bc-modal-head row gap wrap">
+        <h2 id="bcCreateTitle">Warm up profiles</h2>
+        <button type="button" class="btn ghost" id="bcCreateClose">✕</button>
+      </div>
+      <div class="bc-mode-row" role="tablist" aria-label="Launch mode">
+        <button type="button" class="bc-mode-btn" id="bcModeSparks" data-bc-mode="sparks">Launch with Sparks</button>
+        <button type="button" class="bc-mode-btn is-on" id="bcModeWarmup" data-bc-mode="warmup">Warm up only</button>
+      </div>
+      <div class="bc-create-intro">
+        <p class="param-hint" id="bcCreateHint">Auto login + white-hat. Accounts per Business Center follows the setting you chose.</p>
+      </div>
+      <div class="field" id="bcCreateGeoField">
+        <span class="field-label">Geo <span class="bc-req">required</span></span>
+        <div id="bcCreateGeoSelected" class="bc-quick-selected bc-geo-select" role="radiogroup" aria-label="Geo" aria-required="true"></div>
+        <p class="param-hint">The Hoot Business Center must use this same geo.</p>
+      </div>
+      <label class="field" id="bcCreateProxyField"><span class="bc-field-heading">Manual proxy <span class="bc-optional">(optional)</span></span>
+        <input id="bcCreateProxySpec" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="host:port:username:password" />
+        <span class="param-hint">Use a proxy in the selected geo. This manual proxy applies to every profile in the launch.</span>
+      </label>
+      <label class="field hidden" id="bcSparkPasteField">Spark codes
+        <textarea id="bcCreateSparkText" rows="4" placeholder="Paste Spark codes (one per line or space-separated)."></textarea>
+      </label>
+      <label class="field" id="bcCreateCountField">Profiles to launch
+        <input id="bcCreateCount" type="number" min="1" max="50" step="1" value="1" />
+        <span class="param-hint" id="bcCreateAccountGrouping">Business Centers and ad accounts follow your Settings.</span>
+      </label>
+      <p id="bcCreatePreview">1 profile → 1 Business Center → 1 ad account</p>
+      <p id="bcCreateMsg" class="url-status"></p>
+      <div class="bc-modal-actions row gap wrap">
+        <button type="button" class="btn primary" id="bcCreateStart">Start warm-up</button>
+        <button type="button" class="btn" id="bcCreateCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BC: load sparks into warmed ad account -->
+  <div id="bcImportModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Load in AdsPower profile">
+    <div class="crop-modal-backdrop" id="bcImportBackdrop"></div>
+    <div class="crop-modal-card bc-modal-card">
+      <div class="bc-modal-head row gap wrap">
+        <h2>Load in AdsPower profile</h2>
+        <button type="button" class="btn ghost" id="bcImportClose" aria-label="Close">✕</button>
+      </div>
+      <p id="bcImportHint" class="param-hint">Choose an AdsPower profile that is not in this BC sheet yet.</p>
+      <div id="bcImportCandidates" class="bc-import-list"></div>
+      <div id="bcImportAccounts" class="bc-import-list hidden"></div>
+      <p id="bcImportMsg" class="url-status" role="status" aria-live="polite"></p>
+      <div class="bc-modal-actions row gap wrap">
+        <button type="button" class="btn primary" id="bcImportPrimary" disabled>Load in</button>
+        <button type="button" class="btn" id="bcImportNo">No, leave whitehat off</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BC: load sparks into warmed ad account -->
+  <div id="bcLoadModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Load sparks">
+    <div class="crop-modal-backdrop" id="bcLoadBackdrop"></div>
+    <div class="crop-modal-card bc-modal-card">
+      <div class="bc-modal-head row gap wrap">
+        <h2 id="bcLoadTitle">Load sparks</h2>
+        <button type="button" class="btn ghost" id="bcLoadClose">✕</button>
+      </div>
+      <p class="param-hint" id="bcLoadHint">White-hat must be Scheduled. Worker must be online. Max 10 sparks per ad account.</p>
+      <p id="bcLoadProfileLabel" class="bc-muted"></p>
+      <label class="field">Ad account
+        <select id="bcLoadAccount"></select>
+      </label>
+      <p class="param-hint" id="bcLoadAccountHint">Pick which ad account receives the sparks.</p>
+      <label class="field">Spark codes
+        <textarea id="bcLoadSparkText" rows="10" placeholder="Paste Spark codes (one per line or space-separated). Leave blank to use the profile’s assigned pack."></textarea>
+      </label>
+      <div class="field">
+        <span class="field-label">Offer</span>
+        <div id="bcLoadOfferPool" class="bc-quick-pool" role="listbox" aria-label="Offers"></div>
+        <div id="bcLoadOfferSelected" class="bc-quick-selected" aria-live="polite"></div>
+        <p class="param-hint" id="bcLoadOfferHint">Optional. Selecting an offer sets the website URL.</p>
+      </div>
+      <label class="field">Website URL
+        <select id="bcLoadLandingUrl"></select>
+      </label>
+      <p class="param-hint">Defaults to Settings / offer URL when blank. Override per load.</p>
+      <label class="field checkbox-field">
+        <input type="checkbox" id="bcLoadForce" />
+        <span>Force re-launch (override existing campaigns)</span>
+      </label>
+      <p id="bcLoadMsg" class="url-status"></p>
+      <div class="bc-modal-actions row gap wrap">
+        <button type="button" class="btn primary" id="bcLoadStart">Load</button>
+        <button type="button" class="btn" id="bcLoadCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BC: suspend modal -->
+  <div id="bcSuspendModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Mark suspended">
+    <div class="crop-modal-card bc-modal-card">
+      <div class="row gap wrap" style="justify-content:space-between;align-items:center">
+        <h2>Mark suspended</h2>
+        <button type="button" class="btn ghost" id="bcSuspendClose">✕</button>
+      </div>
+      <label class="field">Reason code
+        <select id="bcSuspendCode">
+          <option value="policy">policy</option>
+          <option value="payment">payment</option>
+          <option value="identity">identity</option>
+          <option value="unknown" selected>unknown</option>
+        </select>
+      </label>
+      <label class="field">Notes
+        <input id="bcSuspendReason" type="text" placeholder="optional detail" />
+      </label>
+      <p class="param-hint" id="bcSuspendHint"></p>
+      <div class="row gap wrap">
+        <button type="button" class="btn danger" id="bcSuspendConfirm">Mark suspended</button>
+        <button type="button" class="btn" id="bcSuspendCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BC: screenshot lightbox -->
+  <div id="bcShotLightbox" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Screenshot">
+    <div class="crop-modal-card bc-lightbox-card">
+      <div class="row gap wrap" style="justify-content:space-between;align-items:center">
+        <h2>Screenshot</h2>
+        <button type="button" class="btn ghost" id="bcShotClose">✕</button>
+      </div>
+      <img id="bcShotImg" alt="Provision screenshot" />
+    </div>
+  </div>
+
+  <!-- BC: workflow failed -->
+  <div id="bcFailModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Workflow failed">
+    <div class="crop-modal-card bc-fail-card">
+      <div class="bc-modal-head row gap wrap">
+        <h2 id="bcFailTitle">Workflow failed</h2>
+        <button type="button" class="btn ghost" id="bcFailClose">✕</button>
+      </div>
+      <p class="bc-fail-step" id="bcFailStep"></p>
+      <p class="bc-fail-reason" id="bcFailReason"></p>
+      <details class="bc-fail-console" id="bcFailConsole">
+        <summary>Backend console error</summary>
+        <pre id="bcFailError"></pre>
+      </details>
+      <p class="bc-muted bc-fail-url" id="bcFailUrl"></p>
+      <img id="bcFailShot" class="bc-fail-shot hidden" alt="Profile at failure" />
+      <p id="bcFailShotMissing" class="bc-muted bc-fail-shot-missing hidden">No screenshot was captured for this failure.</p>
+      <p class="param-hint" id="bcFailHint">The AdsPower browser was left where it stopped. Continue picks up from that step.</p>
+      <div class="bc-modal-actions row gap wrap">
+        <button type="button" class="btn primary" id="bcFailContinue">Continue</button>
+        <button type="button" class="btn" id="bcFailDismiss">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BC: disapproved — start deactivate -->
+  <div id="bcDisapprovedModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Business Center disapproved">
+    <div class="crop-modal-backdrop" id="bcDisapprovedBackdrop"></div>
+    <div class="crop-modal-card bc-fail-card">
+      <div class="bc-modal-head row gap wrap">
+        <h2 id="bcDisapprovedTitle">Business Center disapproved</h2>
+        <button type="button" class="btn ghost" id="bcDisapprovedClose">✕</button>
+      </div>
+      <p class="bc-fail-step" id="bcDisapprovedWho"></p>
+      <p class="bc-fail-reason" id="bcDisapprovedReason"></p>
+      <p class="bc-muted" id="bcDisapprovedStatus"></p>
+      <p class="param-hint" id="bcDisapprovedHint">Deactivate closes every ad account, then the Business Center, so the Hoot refund can finish. Proxy is already burned.</p>
+      <div class="bc-modal-actions row gap wrap">
+        <button type="button" class="btn primary" id="bcDisapprovedStart">Start deactivate</button>
+        <button type="button" class="btn" id="bcDisapprovedLater">Not now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BC finance: create VAT / Spark / card -->
+  <div id="bcVatCreateModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Create VAT">
+    <div class="crop-modal-backdrop" id="bcVatCreateBackdrop"></div>
+    <div class="crop-modal-card bc-finance-create-card">
+      <div class="crop-modal-head">
+        <h3>Create VAT</h3>
+        <button type="button" class="btn ghost" id="bcVatCreateClose">✕</button>
+      </div>
+      <label class="field">VAT number
+        <input id="bcVatCreateNumber" type="text" autocomplete="off" placeholder="SE556517159101" spellcheck="false" />
+      </label>
+      <label class="field">Label (optional)
+        <input id="bcVatCreateLabel" type="text" autocomplete="off" placeholder="SE556517" />
+      </label>
+      <p id="bcVatCreateMsg" class="url-status"></p>
+      <div class="row gap wrap crop-modal-actions">
+        <button type="button" class="btn primary" id="bcVatCreateSave">Save VAT</button>
+        <button type="button" class="btn" id="bcVatCreateCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bcAddressCreateModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Add billing address">
+    <div class="crop-modal-backdrop" id="bcAddressCreateBackdrop"></div>
+    <div class="crop-modal-card bc-finance-create-card">
+      <div class="crop-modal-head">
+        <h3>Add billing address</h3>
+        <button type="button" class="btn ghost" id="bcAddressCreateClose">✕</button>
+      </div>
+      <label class="field">Street
+        <input id="bcAddressCreateStreet" type="text" autocomplete="street-address" placeholder="Drottninggatan 31" />
+      </label>
+      <label class="field">Postal code
+        <input id="bcAddressCreatePostal" type="text" autocomplete="postal-code" placeholder="11151" />
+      </label>
+      <label class="field">Label (optional)
+        <input id="bcAddressCreateLabel" type="text" autocomplete="off" placeholder="Custom Stockholm" />
+      </label>
+      <label class="field row gap" style="align-items:center">
+        <input id="bcAddressCreatePin" type="checkbox" />
+        <span>Pin for next warm-up (stop rotating until cleared)</span>
+      </label>
+      <p id="bcAddressCreateMsg" class="url-status"></p>
+      <div class="row gap wrap crop-modal-actions">
+        <button type="button" class="btn primary" id="bcAddressCreateSave">Add address</button>
+        <button type="button" class="btn" id="bcAddressCreateCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bcSparkCreateModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Create Spark code">
+    <div class="crop-modal-backdrop" id="bcSparkCreateBackdrop"></div>
+    <div class="crop-modal-card bc-finance-create-card">
+      <div class="crop-modal-head">
+        <h3>Create white-hat Spark paste</h3>
+        <button type="button" class="btn ghost" id="bcSparkCreateClose">✕</button>
+      </div>
+      <label class="field">White-hat Spark paste
+        <input id="bcSparkCreateCode" type="text" autocomplete="off" placeholder="#…" spellcheck="false" />
+      </label>
+      <p id="bcSparkCreateMsg" class="url-status"></p>
+      <div class="row gap wrap crop-modal-actions">
+        <button type="button" class="btn primary" id="bcSparkCreateSave">Save Spark paste</button>
+        <button type="button" class="btn" id="bcSparkCreateCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bcCardCreateModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="Create card">
+    <div class="crop-modal-backdrop" id="bcCardCreateBackdrop"></div>
+    <form class="crop-modal-card bc-finance-create-card" id="bcCardCreateForm" onsubmit="return false">
+      <div class="crop-modal-head">
+        <h3>Create primary card</h3>
+        <button type="button" class="btn ghost" id="bcCardCreateClose">✕</button>
+      </div>
+      <label class="field">Card number
+        <input id="bcCardCreateNumber" type="text" inputmode="numeric" autocomplete="off" placeholder="•••• •••• •••• ••••" />
+      </label>
+      <div class="row gap wrap">
+        <label class="field">Expiration (MM/YY)
+          <input id="bcCardCreateExp" type="text" placeholder="09/31" maxlength="5" />
+        </label>
+        <label class="field">CVV
+          <input id="bcCardCreateCvv" type="password" inputmode="numeric" autocomplete="off" maxlength="4" />
+        </label>
+      </div>
+      <label class="field">Cardholder name
+        <input id="bcCardCreateName" type="text" autocomplete="cc-name" placeholder="Name on card" />
+      </label>
+      <p class="param-hint">Use the real cardholder name. Do not use the Business Center slug.</p>
+      <p id="bcCardCreateMsg" class="url-status"></p>
+      <div class="row gap wrap crop-modal-actions">
+        <button type="button" class="btn primary" id="bcCardCreateSave">Save card</button>
+        <button type="button" class="btn" id="bcCardCreateCancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="bcHostCreateModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="AdsPower host">
+    <div class="crop-modal-backdrop" id="bcHostCreateBackdrop"></div>
+    <form class="crop-modal-card bc-finance-create-card" id="bcHostCreateForm" onsubmit="return false">
+      <div class="crop-modal-head">
+        <h3 id="bcHostCreateTitle">Create AdsPower host</h3>
+        <button type="button" class="btn ghost" id="bcHostCreateClose">✕</button>
+      </div>
+      <input type="hidden" id="bcHostEditId" value="" />
+      <label class="field">Name
+        <input id="bcHostCreateName" type="text" autocomplete="off" placeholder="Main Windows PC" />
+      </label>
+      <label class="field">AdsPower URL
+        <input id="bcHostCreateUrl" type="text" autocomplete="off" placeholder="YOUR_VALUE" />
+      </label>
+      <label class="field">API key
+        <input id="bcHostCreateKey" type="password" autocomplete="off" spellcheck="false" placeholder="Leave blank to keep current key when editing" />
+      </label>
+      <p id="bcHostCreateMsg" class="url-status"></p>
+      <div class="row gap wrap crop-modal-actions">
+        <button type="button" class="btn primary" id="bcHostCreateSave">Save host</button>
+        <button type="button" class="btn" id="bcHostCreateCancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <script defer src="/emoji-data.js?v=11"></script>
+  <script defer src="/core.js?v=4"></script>
+  <script defer src="/error_helper.js?v=1"></script>
+  <script defer src="/app.js?v=111"></script>
+  <script defer src="/hooks.js?v=5"></script>
+  <script defer src="/chat.js?v=62"></script>
+  <script defer src="/bc.js?v=49"></script>
+  <script defer src="/sparks.js?v=23"></script>
+</body>
+</html>

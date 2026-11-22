@@ -1,0 +1,82 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tiktok-caption-tool",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "ttcaptiontool.com", "custom_domain": true }
+  ],
+
+  // Static SPA + fonts served from the edge (container not woken for HTML).
+  "assets": {
+    "directory": "../static",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/_internal/*", "/mcp", "/mcp/*", "/healthz", "/go", "/go/*"]
+  },
+
+  "containers": [
+    {
+      "class_name": "CaptionToolContainer",
+      "image": "../Dockerfile",
+      "image_build_context": "../",
+      "max_instances": 1,
+      // 8 GiB is enough for Chromium XOR ffmpeg at our concurrency caps;
+      // standard-4 (12 GiB) was unmeasured headroom and dominated the bill.
+      "instance_type": "standard-3"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "class_name": "CaptionToolContainer", "name": "CAPTION_TOOL" },
+      { "class_name": "WorkCoordinator", "name": "WORK_COORDINATOR" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["CaptionToolContainer"] },
+    { "tag": "v2-orchestration", "new_sqlite_classes": ["WorkCoordinator"] }
+  ],
+
+  "r2_buckets": [
+    { "binding": "DATA", "bucket_name": "YOUR_VALUE" }
+  ],
+
+  // Populate database_id with `wrangler d1 create caption-tool-state`.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "caption-tool-state",
+      "database_id": "<your-id>\",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // R2 media retention only. This cron must not start the container.
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  },
+
+  // Cloudflare D1 is authoritative application state. R2 retains blobs and
+  // edge snapshots; Firebase is not used for application-data persistence.
+  "vars": {
+    "USERSTORE_PRIMARY": "d1",
+    "USERSTORE_DUAL_WRITE": "0",
+    "USERSTORE_SHADOW_READ": "0",
+    "DATA_ENCRYPTION_ACTIVE_KID": "v1",
+    "RETENTION_DAYS": "14"
+  },
+
+  // Secrets (wrangler secret put <NAME>):
+  //   INTERNAL_API_KEY, MCP_DEV_KEY, MCP_ENABLED
+  //   Firebase Auth configuration is temporary until a Cloudflare Access
+  //   application is configured. Do not set Firebase service-account secrets.
+  //   R2_*, OPENAI_*, ANTHROPIC_*, CLAUDE_CODE_OAUTH_TOKEN, XAI_*, GEMINI_*, PERPLEXITY_*
+  //   CLAUDE_CODE_OAUTH_TOKEN: `claude setup-token` (subscription). Opus text uses the CLI, not the API.
+  //   SCRAPE_CREATORS_API_KEY, DUOPLUS_API_KEY, SPARK_CALLBACK_SECRET,
+  //   SPARK_CALLBACK_BASE_URL, PUBLIC_UI_ORIGIN, META_*
+  //   HOOT_API_KEY, WEBSHARE_API_KEY, PROVISION_WORKER_TOKEN, PROVISION_OWNER_UID
+  //   (required for start.bat cloud → workers.dev Worker chip)
+  "observability": { "enabled": false }
+}

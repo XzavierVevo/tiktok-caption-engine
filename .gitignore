@@ -1,0 +1,88 @@
+# Runtime data — uploads, downloads, renders, cookies, caches. Never commit.
+data/
+
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Env / secrets
+.env
+.env.*
+*.local
+serviceAccountKey.json
+.firebaserc.local
+secrets/
+*.adminsdk.json
+firebase-adminsdk*.json
+
+# Local HTTPS (self-signed)
+certs/
+
+# Portable FFmpeg (scripts/ensure_ffmpeg.py)
+vendor/ffmpeg/
+
+# Node (worker)
+node_modules/
+worker/dist/
+worker/.wrangler-dry/
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Editor / local MCP wiring (not part of the deployable tree)
+.cursor/*
+!.cursor/agents/
+!.cursor/agents/*.md
+
+# OS / editor
+Thumbs.db
+.DS_Store
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
+
+# Local debug artifacts from provision / Ads Manager runs
+firebase-debug.log
+_captcha_debug.png
+scripts/*_shots/
+scripts/_wh_*.log
+scripts/_finance_*.png
+scripts/_*_shots/
+
+# Local scratch / build copies
+.bc-isolated/
+.codex/
+.tmp-*
+.tmp-tests/
+scripts/_scratch/
+*.bak
+_*_hits.txt
+nul
+worker/-
+
+# ---- secrets: never commit ----
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.secrets*
+secrets/
+certs/
+*.pem
+*.key
+*credentials*.json
+api_keys.txt
+config/gemini_api_key.txt
+*cookies*.json
+*cookies*.txt
+node_modules/
+.wrangler/
+__pycache__/
+*.log
